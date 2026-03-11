@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Outfit', sans-serif;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #0f0c29;  /* fallback for old browsers */
+  background: linear-gradient(135deg, #24243e, #302b63, #0f0c29);
+  overflow: hidden;
+  position: relative;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Animated Background Elements */
+.blob {
+  position: absolute;
+  filter: blur(80px);
+  z-index: 1;
+  opacity: 0.6;
+  animation: float 10s ease-in-out infinite both alternate;
+}
+
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: #ff007f;
+  top: -100px;
+  left: -100px;
+  border-radius: 50%;
+}
+
+.blob-2 {
+  width: 500px;
+  height: 500px;
+  background: #00d2ff;
+  bottom: -150px;
+  right: -100px;
+  border-radius: 50%;
+  animation-delay: 2s;
+  animation-duration: 12s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(50px, 50px) scale(1.1); }
+  100% { transform: translate(-50px, -50px) scale(0.9); }
+}
