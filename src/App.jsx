@@ -13,7 +13,7 @@ import './App.css';
 const AppLayout = ({ children }) => (
   <div style={{ display: 'flex', minHeight: '100vh', background: '#000' }}>
     <Sidebar />
-    <main style={{ marginLeft: '220px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <main style={{ marginLeft: '60px', flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       {children}
     </main>
   </div>
