@@ -20,14 +20,24 @@ const Login = () => {
     setLoading(true);
 
     let error = null;
+    let redirectOnSuccess = false;
 
     if (mode === 'login') {
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       error = loginError;
+      redirectOnSuccess = !error;
     } else if (mode === 'signup') {
-      const { error: signupError } = await supabase.auth.signUp({ email, password });
+      const { data, error: signupError } = await supabase.auth.signUp({ email, password });
       error = signupError;
-      if (!error) setSuccessMsg('Check your email for the confirmation link!');
+      
+      // If no error, check if a session was created immediately (meaning email confirmation is OFF)
+      if (!error) {
+        if (data?.session) {
+           redirectOnSuccess = true;
+        } else {
+           setSuccessMsg('Account created successfully! You can now log in.');
+        }
+      }
     } else if (mode === 'forgot_password') {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
       error = resetError;
@@ -36,7 +46,7 @@ const Login = () => {
 
     if (error) {
       setErrorMsg(error.message);
-    } else if (mode === 'login') {
+    } else if (redirectOnSuccess) {
       navigate('/dashboard');
     }
     setLoading(false);
