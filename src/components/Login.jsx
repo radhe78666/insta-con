@@ -39,9 +39,11 @@ const Login = () => {
         }
       }
     } else if (mode === 'forgot_password') {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://insta-con.vercel.app/reset-password',
+      });
       error = resetError;
-      if (!error) setSuccessMsg('Password reset link sent to your email!');
+      if (!error) setSuccessMsg('Password reset link sent! Check your email.');
     }
 
     if (error) {
