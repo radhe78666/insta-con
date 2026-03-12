@@ -8,7 +8,7 @@
 }
 
 body {
-  background: #09090b; /* Deep dark background */
+  background: #000000; /* Pure Black background */
   color: #fff;
   min-height: 100vh;
   overflow-x: hidden;
@@ -31,7 +31,7 @@ body {
   height: 100vh;
   z-index: 0;
   overflow: hidden;
-  background: radial-gradient(circle at center, #18191c 0%, #09090b 100%);
+  background: radial-gradient(circle at center, #0a0a0a 0%, #000000 100%);
 }
 
 /* Subdued Dark Theme Animated Background Elements */
