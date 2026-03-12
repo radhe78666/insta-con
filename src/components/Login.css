@@ -1,16 +1,18 @@
 .login-container {
   position: relative;
   z-index: 10;
-  width: 400px;
-  padding: 40px;
-  background: rgba(255, 255, 255, 0.05);
+  width: 100%;
+  max-width: 420px;
+  padding: 45px 40px;
+  background: rgba(20, 20, 22, 0.7); /* Much darker glass */
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08); /* Subtle border */
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); /* Deeper shadow */
   transition: transform 0.3s ease;
-  animation: fadeIn 1s ease-out;
+  animation: fadeIn 0.8s ease-out;
+  color: #fff;
 }
 
 .login-container:hover {
@@ -28,16 +30,26 @@
 }
 
 .login-header h2 {
-  color: #fff;
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 10px;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .login-header p {
-  color: rgba(255, 255, 255, 0.6);
+  color: #9ca3af; /* muted gray */
   font-size: 0.95rem;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  margin-bottom: 25px;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 /* Form Inputs */
@@ -48,8 +60,8 @@
 
 .input-group input {
   width: 100%;
-  padding: 15px 20px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.4); /* Solid dark input backgrounds */
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   font-size: 1rem;
@@ -59,9 +71,9 @@
 }
 
 .input-group input:focus {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.6);
+  border-color: #3b82f6; /* Subtle blue focus ring */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .input-group label {
@@ -69,7 +81,7 @@
   left: 20px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
+  color: #6b7280;
   font-size: 1rem;
   pointer-events: none;
   transition: 0.3s ease;
@@ -81,9 +93,9 @@
   top: -10px;
   left: 15px;
   font-size: 0.8rem;
-  color: #fff;
-  background: #232240; /* matches background gradient to cut layout */
-  padding: 0 5px;
+  color: #e5e7eb;
+  background: #18181b; /* Matches dark theme container */
+  padding: 0 6px;
   border-radius: 4px;
 }
 
@@ -97,18 +109,18 @@
 .options label {
   display: flex;
   align-items: center;
-  color: rgba(255, 255, 255, 0.7);
+  color: #9ca3af;
   font-size: 0.9rem;
   cursor: pointer;
 }
 
 .options input[type="checkbox"] {
   margin-right: 8px;
-  accent-color: #ff007f;
+  accent-color: #3b82f6;
 }
 
 .options a {
-  color: rgba(255, 255, 255, 0.7);
+  color: #9ca3af;
   font-size: 0.9rem;
   text-decoration: none;
   transition: color 0.3s;
@@ -121,38 +133,42 @@
 
 .submit-btn {
   width: 100%;
-  padding: 15px;
+  padding: 16px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(90deg, #ff007f, #00d2ff);
-  background-size: 200% auto;
+  background: #2563eb; /* Trustworthy blue */
   color: #fff;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.4s ease;
-  box-shadow: 0 5px 15px rgba(255, 0, 127, 0.4);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
 }
 
-.submit-btn:hover {
-  background-position: right center;
+.submit-btn:hover:not(:disabled) {
+  background: #1d4ed8;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 210, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
 }
 
-.submit-btn:active {
+.submit-btn:active:not(:disabled) {
   transform: translateY(1px);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .register-link {
   text-align: center;
-  margin-top: 25px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9rem;
+  margin-top: 30px;
+  color: #9ca3af;
+  font-size: 0.95rem;
 }
 
 .register-link a {
-  color: #00d2ff;
+  color: #3b82f6;
   text-decoration: none;
   font-weight: 600;
   margin-left: 5px;
@@ -160,7 +176,7 @@
 }
 
 .register-link a:hover {
-  color: #fff;
+  color: #60a5fa;
   text-decoration: underline;
 }
 
@@ -170,10 +186,11 @@
   right: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
+  color: #6b7280;
   cursor: pointer;
   font-size: 0.9rem;
   user-select: none;
+  transition: color 0.3s ease;
 }
 
 .toggle-password:hover {

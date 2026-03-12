@@ -8,54 +8,63 @@
 }
 
 body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  background: #09090b; /* Deep dark background */
+  color: #fff;
   min-height: 100vh;
-  background: #0f0c29;  /* fallback for old browsers */
-  background: linear-gradient(135deg, #24243e, #302b63, #0f0c29);
-  overflow: hidden;
-  position: relative;
+  overflow-x: hidden;
 }
 
 #root {
   width: 100%;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
-/* Animated Background Elements */
+.app-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #18191c 0%, #09090b 100%);
+}
+
+/* Subdued Dark Theme Animated Background Elements */
 .blob {
   position: absolute;
-  filter: blur(80px);
+  filter: blur(100px);
   z-index: 1;
-  opacity: 0.6;
-  animation: float 10s ease-in-out infinite both alternate;
+  opacity: 0.3; /* Less intense for professional dark theme */
+  animation: float 15s ease-in-out infinite both alternate;
 }
 
 .blob-1 {
-  width: 400px;
-  height: 400px;
-  background: #ff007f;
-  top: -100px;
-  left: -100px;
+  width: 600px;
+  height: 600px;
+  background: #2b32b2; /* Deep blue glow */
+  top: -150px;
+  left: -150px;
   border-radius: 50%;
 }
 
 .blob-2 {
   width: 500px;
   height: 500px;
-  background: #00d2ff;
+  background: #1488cc; /* Secondary deep blue */
   bottom: -150px;
   right: -100px;
   border-radius: 50%;
-  animation-delay: 2s;
-  animation-duration: 12s;
+  animation-delay: 3s;
+  animation-duration: 18s;
 }
 
 @keyframes float {
   0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(50px, 50px) scale(1.1); }
-  100% { transform: translate(-50px, -50px) scale(0.9); }
+  50% { transform: translate(60px, 60px) scale(1.05); }
+  100% { transform: translate(-60px, -60px) scale(0.95); }
 }
