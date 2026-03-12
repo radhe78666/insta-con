@@ -212,30 +212,31 @@
 /* Video Grid */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
-  padding: 24px 28px;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 16px;
+  padding: 20px 24px;
 }
 
 .video-card {
-  background: #0a0a0a;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: #0d0d0d;
+  border-radius: 10px;
   overflow: hidden;
-  transition: all 0.25s;
+  transition: all 0.22s;
   cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.05);
 }
 
 .video-card:hover {
-  border-color: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.14);
   transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.6);
 }
 
 .video-thumb-wrap {
   position: relative;
-  aspect-ratio: 3/4;
+  aspect-ratio: 9/16;
   overflow: hidden;
+  background: #111;
 }
 
 .video-thumb {
@@ -247,18 +248,32 @@
 }
 
 .video-card:hover .video-thumb {
-  transform: scale(1.04);
+  transform: scale(1.03);
+}
+
+/* Gradient overlay always visible at bottom */
+.video-thumb-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  pointer-events: none;
 }
 
 .video-overlay {
   position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.22s;
   display: flex;
   align-items: flex-end;
-  padding: 12px;
-  opacity: 0;
-  transition: opacity 0.25s;
 }
 
 .video-card:hover .video-overlay {
@@ -266,39 +281,41 @@
 }
 
 .save-btn {
-  padding: 7px 14px;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 7px;
   border: none;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.18);
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.save-btn:hover {
-  background: #3b82f6;
-}
-
+.save-btn:hover { background: #2563eb; }
 .save-btn.saved {
-  background: rgba(16,185,129,0.25);
+  background: rgba(16,185,129,0.3);
   color: #34d399;
 }
 
 .platform-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.55);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 3;
 }
 
 .video-info {

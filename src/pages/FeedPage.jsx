@@ -53,7 +53,7 @@ const FeedPage = () => {
   const [activeTab, setActiveTab] = useState('feed');
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [showFilterPanel, setShowFilterPanel] = useState(true);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [configTab, setConfigTab] = useState('keyword');
 
   // Saved channels
@@ -90,7 +90,7 @@ const FeedPage = () => {
   const [videoSearchInput, setVideoSearchInput] = useState('');
   const [videoChannelFollowerFilter, setVideoChannelFollowerFilter] = useState(FOLLOWER_FILTERS[0]);
   const [videoSortBy, setVideoSortBy] = useState(SORT_OPTIONS[0]);
-  const [videoResults, setVideoResults] = useState([]);
+  const [videoResults, setVideoResults] = useState(MOCK_VIDEOS);
 
   const handleChannelSearch = () => {
     if (!searchKeyword.trim()) return;
@@ -161,12 +161,33 @@ const FeedPage = () => {
   };
 
   const handleVideoSearch = () => {
-    // Mock: return all videos filtered by follower size if channel mode
-    const results = MOCK_VIDEOS.filter(v => {
-      const ch = savedChannels.find(c => c.handle === v.channelHandle);
-      const followers = ch?.followers || 50000;
-      if (videoChannelFollowerFilter.max === Infinity) return followers >= videoChannelFollowerFilter.min;
-      return followers >= videoChannelFollowerFilter.min && followers < videoChannelFollowerFilter.max;
+    let results = [...MOCK_VIDEOS];
+    // Filter by keyword in title or channel
+    if (videoSearchInput.trim()) {
+      const kw = videoSearchInput.toLowerCase();
+      results = results.filter(v =>
+        v.title.toLowerCase().includes(kw) ||
+        v.channelHandle.toLowerCase().includes(kw) ||
+        v.channel.toLowerCase().includes(kw)
+      );
+    }
+    // Filter by follower size of the channel
+    if (videoChannelFollowerFilter.label !== 'All') {
+      results = results.filter(v => {
+        const f = v.followers;
+        return videoChannelFollowerFilter.max === Infinity
+          ? f >= videoChannelFollowerFilter.min
+          : f >= videoChannelFollowerFilter.min && f < videoChannelFollowerFilter.max;
+      });
+    }
+    // Sort results
+    results = results.sort((a, b) => {
+      if (videoSortBy.key === 'newest') return a.daysAgo - b.daysAgo;
+      if (videoSortBy.key === 'oldest') return b.daysAgo - a.daysAgo;
+      if (videoSortBy.key === 'views') return b.views - a.views;
+      if (videoSortBy.key === 'engagement') return b.engagement - a.engagement;
+      if (videoSortBy.key === 'outlier') return b.outlier - a.outlier;
+      return 0;
     });
     setVideoResults(results);
   };
@@ -361,14 +382,20 @@ const FeedPage = () => {
               <div className="vtf-pills">
                 {FOLLOWER_FILTERS.map(f => (
                   <button key={f.label} className={`vtf-pill ${videoChannelFollowerFilter.label === f.label ? 'active' : ''}`}
-                    onClick={() => setVideoChannelFollowerFilter(f)}>{f.label}</button>
+                    onClick={() => {
+                      setVideoChannelFollowerFilter(f);
+                      setTimeout(handleVideoSearch, 0);
+                    }}>{f.label}</button>
                 ))}
               </div>
               <div className="vtf-label" style={{marginTop: '14px'}}>Sort by:</div>
               <div className="vtf-pills">
                 {SORT_OPTIONS.map(opt => (
                   <button key={opt.key} className={`vtf-pill ${videoSortBy.key === opt.key ? 'active' : ''}`}
-                    onClick={() => setVideoSortBy(opt)}>{opt.label}</button>
+                    onClick={() => {
+                      setVideoSortBy(opt);
+                      setTimeout(handleVideoSearch, 0);
+                    }}>{opt.label}</button>
                 ))}
               </div>
             </div>
@@ -402,8 +429,8 @@ const FeedPage = () => {
             ) : (
               <div className="empty-state">
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-                <h3>Search for videos</h3>
-                <p>Enter a keyword or paste a video URL to find Instagram videos</p>
+                <h3>No videos found</h3>
+                <p>Try a different keyword or change the follower filter</p>
               </div>
             )}
           </div>
