@@ -44,18 +44,18 @@ body {
 }
 
 .blob-1 {
-  width: 600px;
-  height: 600px;
-  background: #2b32b2; /* Deep blue glow */
+  width: 500px;
+  height: 500px;
+  background: #0d1117; /* Near pure black blob, barely visible */
   top: -150px;
   left: -150px;
   border-radius: 50%;
 }
 
 .blob-2 {
-  width: 500px;
-  height: 500px;
-  background: #1488cc; /* Secondary deep blue */
+  width: 400px;
+  height: 400px;
+  background: #0d1117;
   bottom: -150px;
   right: -100px;
   border-radius: 50%;

@@ -61,7 +61,7 @@
 .input-group input {
   width: 100%;
   padding: 16px 20px;
-  background: rgba(0, 0, 0, 0.4); /* Solid dark input backgrounds */
+  background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   font-size: 1rem;
@@ -71,9 +71,19 @@
 }
 
 .input-group input:focus {
-  background: rgba(0, 0, 0, 0.6);
-  border-color: #3b82f6; /* Subtle blue focus ring */
+  background: rgba(0, 0, 0, 0.7);
+  border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Fix browser autofill yellow background */
+.input-group input:-webkit-autofill,
+.input-group input:-webkit-autofill:hover,
+.input-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+  -webkit-text-fill-color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .input-group label {
@@ -89,12 +99,13 @@
 
 /* Floating label effect */
 .input-group input:focus ~ label,
-.input-group input:valid ~ label {
+.input-group input:valid ~ label,
+.input-group input:-webkit-autofill ~ label {
   top: -10px;
   left: 15px;
   font-size: 0.8rem;
   color: #e5e7eb;
-  background: #18181b; /* Matches dark theme container */
+  background: #000000;
   padding: 0 6px;
   border-radius: 4px;
 }
