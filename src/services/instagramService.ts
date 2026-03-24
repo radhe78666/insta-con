@@ -39,8 +39,8 @@ export const fetchInstagramPosts = async (username: string): Promise<InstagramVi
       const rawThumb = n.image_versions2?.candidates?.[0]?.url || n.display_url || 'https://via.placeholder.com/400x800';
       return {
         id: n.id || Math.random().toString(),
-        channelId: n.user?.username || n.owner?.username || cleanUsername,
-        thumbnailUrl: `https://wsrv.nl/?url=${encodeURIComponent(rawThumb)}`,
+        channelId: cleanUsername,
+        thumbnailUrl: rawThumb,
         caption: n.caption?.text || n.edge_media_to_caption?.edges?.[0]?.node?.text || '',
         views: n.view_count || n.play_count || Math.floor(Math.random() * 50000),
         engagement: n.like_count || n.edge_media_preview_like?.count || 0,
@@ -74,10 +74,10 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
     const rawAvatar = r.profile_pic_url || r.hd_profile_pic_url_info?.url || 'https://via.placeholder.com/100';
 
     return [{
-      id: r.id || cleanUsername,
+      id: r.username || cleanUsername,
       username: r.username || cleanUsername,
       fullName: r.full_name || cleanUsername,
-      avatarUrl: `https://wsrv.nl/?url=${encodeURIComponent(rawAvatar)}`,
+      avatarUrl: rawAvatar,
       followers: r.follower_count || r.edge_followed_by?.count || 0,
       totalViews: 0,
       description: r.biography || '',

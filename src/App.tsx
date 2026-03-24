@@ -27,18 +27,63 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [user, setUser] = useState<User | null>(null);
-  const [savedVideos, setSavedVideos] = useState<InstagramVideo[]>(() => {
-    const saved = localStorage.getItem('savedVideos');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [savedVideos, setSavedVideos] = useState<InstagramVideo[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
-  const [trackedChannels, setTrackedChannels] = useState<InstagramChannel[]>(() => {
-    const saved = localStorage.getItem('trackedChannels');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [trackedChannels, setTrackedChannels] = useState<InstagramChannel[]>([]);
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [selectedVideoForAnalysis, setSelectedVideoForAnalysis] = useState<InstagramVideo | null>(null);
   const [selectedVideoDetails, setSelectedVideoDetails] = useState<InstagramVideo | null>(null);
+
+  React.useEffect(() => {
+    if (!user) {
+      setTrackedChannels([]);
+      setSavedVideos([]);
+      return;
+    }
+
+    const fetchData = async () => {
+      const { data: channelsData } = await supabase
+        .from('tracked_channels')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (channelsData) {
+        setTrackedChannels(channelsData.map(c => ({
+          id: c.id,
+          username: c.username,
+          fullName: c.full_name,
+          avatarUrl: c.avatar_url || '',
+          followers: c.followers || 0,
+          totalViews: 0,
+          description: c.description || '',
+          niche: 'Instagram User',
+          platform: c.platform || 'Instagram'
+        })));
+      }
+
+      const { data: videosData } = await supabase
+        .from('saved_videos')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (videosData) {
+        setSavedVideos(videosData.map(v => ({
+          id: v.id,
+          channelId: v.channel_id,
+          thumbnailUrl: v.thumbnail_url || '',
+          caption: v.caption || '',
+          views: v.views || 0,
+          engagement: isNaN(Number(v.engagement)) ? 0 : Number(v.engagement),
+          outlierScore: isNaN(Number(v.outlier_score)) ? 1 : Number(v.outlier_score),
+          postedAt: v.posted_at,
+          platform: v.platform || 'Instagram',
+          videoUrl: v.video_url || ''
+        })));
+      }
+    };
+    
+    fetchData();
+  }, [user]);
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,13 +117,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  React.useEffect(() => {
-    localStorage.setItem('trackedChannels', JSON.stringify(trackedChannels));
-  }, [trackedChannels]);
 
-  React.useEffect(() => {
-    localStorage.setItem('savedVideos', JSON.stringify(savedVideos));
-  }, [savedVideos]);
 
   const handleLogin = (email: string) => {
     // Handled by Auth.tsx and onAuthStateChange
@@ -90,30 +129,62 @@ export default function App() {
     setUser(null);
   };
 
-  const handleAddToLibrary = (video: InstagramVideo) => {
+  const handleAddToLibrary = async (video: InstagramVideo) => {
     setSavedVideos(prev => {
-      if (!prev.find(v => v.id === video.id)) {
-        return [...prev, video];
-      }
+      if (!prev.find(v => v.id === video.id)) return [...prev, video];
       return prev;
     });
+
+    if (user) {
+      await supabase.from('saved_videos').upsert({
+        id: video.id,
+        user_id: user.id,
+        channel_id: video.channelId,
+        thumbnail_url: video.thumbnailUrl,
+        caption: video.caption,
+        views: video.views,
+        engagement: video.engagement,
+        outlier_score: video.outlierScore,
+        posted_at: video.postedAt,
+        platform: video.platform,
+        video_url: video.videoUrl
+      });
+    }
   };
 
-  const handleRemoveFromLibrary = (id: string) => {
+  const handleRemoveFromLibrary = async (id: string) => {
     setSavedVideos(prev => prev.filter(v => v.id !== id));
+    if (user) {
+      await supabase.from('saved_videos').delete().match({ user_id: user.id, id });
+    }
   };
 
-  const handleAddChannel = (channel: InstagramChannel) => {
+  const handleAddChannel = async (channel: InstagramChannel) => {
     setTrackedChannels(prev => {
-      if (!prev.find(c => c.username === channel.username)) {
-        return [channel, ...prev];
-      }
+      if (!prev.find(c => c.username === channel.username)) return [channel, ...prev];
       return prev;
     });
+    
+    if (user) {
+      await supabase.from('tracked_channels').upsert({
+        id: channel.id,
+        user_id: user.id,
+        username: channel.username,
+        full_name: channel.fullName,
+        avatar_url: channel.avatarUrl,
+        followers: channel.followers,
+        description: channel.description,
+        platform: channel.platform
+      });
+    }
   };
 
-  const handleRemoveChannel = (id: string) => {
+  const handleRemoveChannel = async (id: string) => {
     setTrackedChannels(prev => prev.filter(c => c.id !== id));
+    
+    if (user) {
+      await supabase.from('tracked_channels').delete().match({ user_id: user.id, id });
+    }
   };
 
   const getChannel = (channelId: string) => {
