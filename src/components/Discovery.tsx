@@ -23,6 +23,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { InstagramVideo, InstagramChannel, FilterConfig } from '../types';
 import { MOCK_VIDEOS } from '../mockData';
+import { fetchInstagramPosts } from '../services/instagramService';
 
 interface FlyingVideo {
   id: string;
@@ -71,6 +72,25 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const [isLibraryPulsing, setIsLibraryPulsing] = useState(false);
   const [showDevNotice, setShowDevNotice] = useState(initialView === 'Videos');
   const libraryButtonRef = useRef<HTMLButtonElement>(null);
+  const [apiVideos, setApiVideos] = useState<InstagramVideo[]>([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
+
+  React.useEffect(() => {
+    // Only load if not library
+    if (initialView === 'Library') return;
+    
+    let isMounted = true;
+    setIsLoadingVideos(true);
+    // Using humansofny as default test subject for real-time
+    fetchInstagramPosts('https://www.instagram.com/humansofny/').then(videos => {
+      if (isMounted) {
+        // Fallback to MOCK_VIDEOS if Apify fails or returns empty array
+        setApiVideos(videos.length > 0 ? videos : MOCK_VIDEOS);
+        setIsLoadingVideos(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, [initialView]);
 
   const categories = ['Trending', 'For You', 'Music', 'Sports', 'Entertainment', 'Tech', 'Gaming'];
 
@@ -90,7 +110,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const getChannel = (id: string) => trackedChannels.find(c => c.id === id);
 
   const filteredVideos = useMemo(() => {
-    let videos = initialView === 'Library' ? savedVideos : MOCK_VIDEOS;
+    let videos = initialView === 'Library' ? savedVideos : (apiVideos.length > 0 ? apiVideos : MOCK_VIDEOS);
 
     // Apply search and category
     if (searchQuery) {
@@ -567,7 +587,13 @@ const Discovery: React.FC<DiscoveryProps> = ({
               </h2>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
-            {filteredVideos.map((video) => {
+            {isLoadingVideos ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-zinc-400 font-bold">Scraping real-time videos from Instagram...</p>
+                <p className="text-zinc-600 text-xs mt-2">This may take 15-30 seconds via Apify.</p>
+              </div>
+            ) : filteredVideos.map((video) => {
               const channel = getChannel(video.channelId);
               const isSaved = savedVideos.some(v => v.id === video.id);
 
