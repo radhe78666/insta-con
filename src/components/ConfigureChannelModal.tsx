@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { InstagramChannel } from '../types';
+import { searchInstagramProfile } from '../services/instagramService';
 
 interface ConfigureChannelModalProps {
   isOpen: boolean;
@@ -43,30 +44,36 @@ const ConfigureChannelModal: React.FC<ConfigureChannelModalProps> = ({
     if (!inputValue.trim()) return;
     
     setIsSearching(true);
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    setSearchResults([]);
 
-    // Mock results based on input
-    const niches = ['AI & Tech', 'Education', 'Lifestyle', 'Business', 'Creative', 'Entertainment'];
-    
-    const mockResults: InstagramChannel[] = Array.from({ length: 6 }).map((_, i) => ({
-      id: Math.random().toString(),
-      username: i === 0 
-        ? inputValue.toLowerCase().replace(/\s+/g, '.') 
-        : `${inputValue.toLowerCase()}_${['official', 'hub', 'daily', 'pro', 'insights', 'network'][i-1]}`,
-      fullName: i === 0 
-        ? inputValue 
-        : `${inputValue} ${['Official', 'Hub', 'Daily', 'Pro', 'Insights', 'Network'][i-1]}`,
-      avatarUrl: `https://picsum.photos/seed/${inputValue}${i}/100/100`,
-      followers: Math.floor(Math.random() * 1000000) + 10000,
-      totalViews: Math.floor(Math.random() * 500000000) + 500000,
-      description: `Expert in ${inputValue} content and digital strategy. Leading the way in ${niches[i]}.`,
-      niche: niches[i],
-      platform: 'Instagram'
-    }));
+    try {
+      let searchUsername = inputValue.trim();
+      
+      // Extract username from URL if they pasted one
+      if (searchUsername.includes('instagram.com/')) {
+        const parts = searchUsername.split('instagram.com/');
+        searchUsername = parts[1].split('/')[0];
+      } else if (searchUsername.startsWith('@')) {
+        searchUsername = searchUsername.slice(1);
+      } else if (activeTab === 'keyword') {
+        // Apify profile scraping currently requires a direct profile.
+        // We will assume keyword searches try the exact username too as a fallback feature.
+        searchUsername = searchUsername.toLowerCase().replace(/\s+/g, '');
+      }
 
-    setSearchResults(mockResults);
-    setIsSearching(false);
+      const profile = await searchInstagramProfile(searchUsername);
+      
+      if (profile) {
+        setSearchResults([profile]);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error(error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const isAlreadyTracked = (username: string) => {
