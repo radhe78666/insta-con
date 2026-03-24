@@ -17,7 +17,12 @@ const fetchRapidApi = async (endpoint: string, body: any) => {
   return await res.json();
 };
 
-export const fetchInstagramPosts = async (channelUrl: string, maxPages = 3): Promise<InstagramVideo[]> => {
+export interface FetchPostsResult {
+  videos: InstagramVideo[];
+  nextCursor?: string;
+}
+
+export const fetchInstagramPostsPage = async (channelUrl: string, cursor: string = ''): Promise<FetchPostsResult> => {
   try {
     let cleanUsername = channelUrl.trim();
     if (cleanUsername.includes('instagram.com/')) {
@@ -27,31 +32,18 @@ export const fetchInstagramPosts = async (channelUrl: string, maxPages = 3): Pro
       cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
     }
 
-    let allVideos: any[] = [];
-    let endCursor = '';
-    let hasNextPage = true;
-    let pagesFetched = 0;
-
-    while (hasNextPage && pagesFetched < maxPages) {
-      const data = await fetchRapidApi('posts', { username: cleanUsername, maxId: endCursor });
-      
-      if (!data || !data.result || !data.result.edges) {
-        break;
-      }
-
-      const nodes = data.result.edges.map((edge: any) => edge.node);
-      const videoNodes = nodes.filter((n: any) => n.media_type === 2 || n.video_versions || n.video_url);
-      
-      allVideos = [...allVideos, ...videoNodes];
-      
-      endCursor = data.result.page_info?.end_cursor || '';
-      hasNextPage = !!data.result.page_info?.has_next_page && !!endCursor;
-      pagesFetched++;
+    const data = await fetchRapidApi('posts', { username: cleanUsername, maxId: cursor });
+    
+    if (!data || !data.result || !data.result.edges) {
+      return { videos: [], nextCursor: '' };
     }
 
-    const uniqueVideos = Array.from(new Map(allVideos.map(v => [v.id, v])).values());
+    const nodes = data.result.edges.map((edge: any) => edge.node);
+    const videoNodes = nodes.filter((n: any) => n.media_type === 2 || n.video_versions || n.video_url);
 
-    return uniqueVideos.map((n: any) => {
+    const endCursor = data.result.page_info?.has_next_page ? data.result.page_info?.end_cursor : '';
+
+    const formattedVideos = videoNodes.map((n: any) => {
       const rawThumb = n.image_versions2?.candidates?.[0]?.url || n.display_url || 'https://via.placeholder.com/400x800';
       
       const likes = n.like_count || n.edge_media_preview_like?.count || 0;
@@ -76,9 +68,11 @@ export const fetchInstagramPosts = async (channelUrl: string, maxPages = 3): Pro
         videoUrl: n.video_versions?.[0]?.url || n.video_url || `https://www.instagram.com/p/${n.code}/`
       };
     });
+
+    return { videos: formattedVideos, nextCursor: endCursor };
   } catch (error) {
     console.error('Error fetching from RapidAPI:', error);
-    return [];
+    return { videos: [], nextCursor: '' };
   }
 };
 

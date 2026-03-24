@@ -23,7 +23,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { InstagramVideo, InstagramChannel, FilterConfig } from '../types';
 import { MOCK_VIDEOS } from '../mockData';
-import { fetchInstagramPosts } from '../services/instagramService';
+import { fetchInstagramPostsPage } from '../services/instagramService';
 
 interface FlyingVideo {
   id: string;
@@ -74,6 +74,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const libraryButtonRef = useRef<HTMLButtonElement>(null);
   const [apiVideos, setApiVideos] = useState<InstagramVideo[]>([]);
   const [isLoadingVideos, setIsLoadingVideos] = useState(false);
+  const [channelCursors, setChannelCursors] = useState<Record<string, string>>({});
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   React.useEffect(() => {
     // Only load if not library
@@ -88,28 +90,29 @@ const Discovery: React.FC<DiscoveryProps> = ({
     let isMounted = true;
     setIsLoadingVideos(true);
     
-    const fetchAllVideos = async () => {
+    const fetchInitialVideos = async () => {
+      const newCursors: Record<string, string> = {};
+      let allVideos: InstagramVideo[] = [];
+
       try {
-        const promises = trackedChannels.map(channel => 
-          fetchInstagramPosts(`https://www.instagram.com/${channel.username}/`)
-        );
+        const promises = trackedChannels.map(async (channel) => {
+          const result = await fetchInstagramPostsPage(`https://www.instagram.com/${channel.username}/`, '');
+          newCursors[channel.username] = result.nextCursor || '';
+          return result.videos;
+        });
+        
         const results = await Promise.all(promises);
-        if (isMounted) {
-          const allVideos = results.flat().sort((a, b) => 
-            new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()
-          );
-          setApiVideos(allVideos);
-          setIsLoadingVideos(false);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setApiVideos([]);
-          setIsLoadingVideos(false);
-        }
+        allVideos = results.flat();
+      } catch (err) {}
+
+      if (isMounted) {
+        setApiVideos(allVideos.sort((a,b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
+        setChannelCursors(newCursors);
+        setIsLoadingVideos(false);
       }
     };
     
-    fetchAllVideos();
+    fetchInitialVideos();
 
     return () => { isMounted = false; };
   }, [initialView, trackedChannels]);
@@ -186,6 +189,35 @@ const Discovery: React.FC<DiscoveryProps> = ({
         caption: "Newly added video from URL"
       });
     }
+  };
+
+  const handleLoadMore = async () => {
+    setIsFetchingMore(true);
+    let newVideos: InstagramVideo[] = [];
+    const updatedCursors = { ...channelCursors };
+
+    try {
+      const promises = trackedChannels.map(async (channel) => {
+        const cursor = channelCursors[channel.username];
+        if (cursor) {
+          const result = await fetchInstagramPostsPage(`https://www.instagram.com/${channel.username}/`, cursor);
+          updatedCursors[channel.username] = result.nextCursor || '';
+          return result.videos;
+        }
+        return [];
+      });
+
+      const results = await Promise.all(promises);
+      newVideos = results.flat();
+    } catch(e) {}
+
+    setApiVideos(prev => {
+      const all = [...prev, ...newVideos];
+      const uniqueVideos = Array.from(new Map(all.map(v => [v.id, v])).values());
+      return uniqueVideos.sort((a,b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+    });
+    setChannelCursors(updatedCursors);
+    setIsFetchingMore(false);
   };
 
   const sortOptions = [
@@ -776,6 +808,29 @@ const Discovery: React.FC<DiscoveryProps> = ({
               );
             })}
           </div>
+
+          {/* Load More Button */}
+          {initialView !== 'Library' && filteredVideos.length > 0 && Object.values(channelCursors).some(c => !!c) && (
+            <div className="flex justify-center mt-10 mb-8">
+              <button 
+                onClick={handleLoadMore}
+                disabled={isFetchingMore}
+                className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all flex items-center gap-3 disabled:opacity-50"
+              >
+                {isFetchingMore ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
+                    Loading more videos...
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="w-5 h-5 text-brand-accent" />
+                    Load More Videos
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>
