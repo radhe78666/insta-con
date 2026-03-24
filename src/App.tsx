@@ -1,0 +1,387 @@
+import React, { useState } from 'react';
+import { User, InstagramVideo, InstagramChannel } from './types';
+import { MOCK_VIDEOS, MOCK_CHANNELS } from './mockData';
+import { supabase } from './lib/supabase';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import Discovery from './components/Discovery';
+import Channels from './components/Channels';
+import Analysis from './components/Analysis';
+import Auth from './components/Auth';
+import ConfigureChannelModal from './components/ConfigureChannelModal';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Play, 
+  Instagram, 
+  X, 
+  Eye, 
+  TrendingUp, 
+  Zap, 
+  Clock, 
+  BookmarkCheck, 
+  Bookmark, 
+  ExternalLink 
+} from 'lucide-react';
+
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [user, setUser] = useState<User | null>(null);
+  const [savedVideos, setSavedVideos] = useState<InstagramVideo[]>([MOCK_VIDEOS[0], MOCK_VIDEOS[1]]);
+  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [trackedChannels, setTrackedChannels] = useState<InstagramChannel[]>(MOCK_CHANNELS);
+  const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
+  const [selectedVideoForAnalysis, setSelectedVideoForAnalysis] = useState<InstagramVideo | null>(null);
+  const [selectedVideoDetails, setSelectedVideoDetails] = useState<InstagramVideo | null>(null);
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || 'User',
+          plan: 'Pro',
+          usage: { videosAnalyzed: 0, limit: 100 }
+        });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || 'User',
+          plan: 'Pro',
+          usage: { videosAnalyzed: 0, limit: 100 }
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = (email: string) => {
+    // Handled by Auth.tsx and onAuthStateChange
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
+  const handleAddToLibrary = (video: InstagramVideo) => {
+    setSavedVideos(prev => {
+      if (!prev.find(v => v.id === video.id)) {
+        return [...prev, video];
+      }
+      return prev;
+    });
+  };
+
+  const handleRemoveFromLibrary = (id: string) => {
+    setSavedVideos(prev => prev.filter(v => v.id !== id));
+  };
+
+  const handleAddChannel = (channel: InstagramChannel) => {
+    setTrackedChannels(prev => {
+      if (!prev.find(c => c.username === channel.username)) {
+        return [channel, ...prev];
+      }
+      return prev;
+    });
+  };
+
+  const handleRemoveChannel = (id: string) => {
+    setTrackedChannels(prev => prev.filter(c => c.id !== id));
+  };
+
+  const getChannel = (channelId: string) => {
+    return trackedChannels.find(c => c.id === channelId);
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}d`;
+    return date.toLocaleDateString();
+  };
+
+  if (!isAuthenticated || !user) {
+    return <Auth onLogin={handleLogin} />;
+  }
+
+  const renderContent = () => {
+    if (activeTab === 'analysis' && selectedVideoForAnalysis) {
+      return (
+        <Analysis 
+          video={selectedVideoForAnalysis}
+          channel={trackedChannels.find(c => c.id === selectedVideoForAnalysis.channelId)}
+          onBack={() => setActiveTab('library')}
+          onViewDetails={(video) => setSelectedVideoDetails(video)}
+          onRemove={(id) => {
+            handleRemoveFromLibrary(id);
+            setActiveTab('library');
+          }}
+        />
+      );
+    }
+
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard user={user} />;
+      case 'discovery':
+        return (
+          <Discovery 
+            onAddToLibrary={handleAddToLibrary} 
+            savedVideos={savedVideos} 
+            initialView="Feed" 
+            setActiveTab={setActiveTab} 
+            isFilterOpen={isFilterOpen} 
+            setIsFilterOpen={setIsFilterOpen} 
+            trackedChannels={trackedChannels} 
+            onOpenConfigure={() => setIsConfigureModalOpen(true)}
+            selectedVideoDetails={selectedVideoDetails}
+            setSelectedVideoDetails={setSelectedVideoDetails}
+          />
+        );
+      case 'videos':
+        return (
+          <Discovery 
+            onAddToLibrary={handleAddToLibrary} 
+            savedVideos={savedVideos} 
+            initialView="Videos" 
+            setActiveTab={setActiveTab} 
+            isFilterOpen={isFilterOpen} 
+            setIsFilterOpen={setIsFilterOpen} 
+            trackedChannels={trackedChannels} 
+            onOpenConfigure={() => setIsConfigureModalOpen(true)}
+            selectedVideoDetails={selectedVideoDetails}
+            setSelectedVideoDetails={setSelectedVideoDetails}
+          />
+        );
+      case 'library':
+        return (
+          <Discovery 
+            onAddToLibrary={handleAddToLibrary} 
+            savedVideos={savedVideos} 
+            initialView="Library" 
+            setActiveTab={setActiveTab} 
+            isFilterOpen={isFilterOpen} 
+            setIsFilterOpen={setIsFilterOpen} 
+            trackedChannels={trackedChannels} 
+            onOpenConfigure={() => setIsConfigureModalOpen(true)}
+            onViewAnalysis={(video) => {
+              setSelectedVideoForAnalysis(video);
+              setActiveTab('analysis');
+            }}
+            selectedVideoDetails={selectedVideoDetails}
+            setSelectedVideoDetails={setSelectedVideoDetails}
+          />
+        );
+      case 'channels':
+        return <Channels setActiveTab={setActiveTab} trackedChannels={trackedChannels} onOpenConfigure={() => setIsConfigureModalOpen(true)} onRemoveChannel={handleRemoveChannel} />;
+      default:
+        return <Dashboard user={user} />;
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-brand-bg">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        user={user} 
+        onLogout={handleLogout} 
+      />
+      
+      <main className="flex-1 pl-20 transition-all duration-300">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full"
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      <ConfigureChannelModal 
+        isOpen={isConfigureModalOpen}
+        onClose={() => setIsConfigureModalOpen(false)}
+        onAddChannel={handleAddChannel}
+        onRemoveChannel={handleRemoveChannel}
+        trackedChannels={trackedChannels}
+      />
+
+      {/* Global Video Details Modal */}
+      <AnimatePresence>
+        {selectedVideoDetails && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedVideoDetails(null)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#1a1a1a] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto max-h-[90vh]"
+            >
+              {/* Left Side: Video Thumbnail */}
+              <div className="md:w-[40%] relative bg-black flex items-center justify-center group overflow-hidden aspect-[9/16] md:aspect-auto">
+                <img 
+                  src={selectedVideoDetails.thumbnailUrl} 
+                  alt={selectedVideoDetails.caption}
+                  className="w-full h-full object-cover opacity-80"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-brand-accent/90 flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-110">
+                    <Play className="w-5 h-5 text-white fill-current ml-1" />
+                  </div>
+                </div>
+                
+                {/* Platform Badge */}
+                <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center gap-2">
+                  <Instagram className="w-3 h-3 text-brand-accent" />
+                  <span className="text-[10px] font-bold text-white">Instagram</span>
+                </div>
+              </div>
+
+              {/* Right Side: Details */}
+              <div className="md:w-[60%] p-5 flex flex-col bg-brand-surface/50 overflow-y-auto">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2.5">
+                    <img 
+                      src={getChannel(selectedVideoDetails.channelId)?.avatarUrl} 
+                      alt={getChannel(selectedVideoDetails.channelId)?.username}
+                      className="w-7 h-7 rounded-full border border-white/10"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div>
+                      <h4 className="text-xs font-bold text-white">@{getChannel(selectedVideoDetails.channelId)?.username}</h4>
+                      <p className="text-[9px] text-zinc-500">{getChannel(selectedVideoDetails.channelId)?.fullName}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedVideoDetails(null)}
+                    className="p-1.5 rounded-full hover:bg-white/5 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 mb-5">
+                  <h3 className="text-base font-bold text-white mb-4 leading-snug">
+                    {selectedVideoDetails.caption}
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-2.5 mb-5">
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col gap-0.5">
+                      <span className="text-[8px] uppercase tracking-widest text-zinc-500 font-bold">Views</span>
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-3 h-3 text-brand-accent" />
+                        <span className="text-sm font-black text-white">{formatNumber(selectedVideoDetails.views)}</span>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col gap-0.5">
+                      <span className="text-[8px] uppercase tracking-widest text-zinc-500 font-bold">Likes</span>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-brand-accent" />
+                        <span className="text-sm font-black text-white">{formatNumber(Math.floor(selectedVideoDetails.views * selectedVideoDetails.engagement))}</span>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col gap-0.5">
+                      <span className="text-[8px] uppercase tracking-widest text-zinc-500 font-bold">Outline Score</span>
+                      <div className="flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-brand-accent fill-current" />
+                        <span className="text-sm font-black text-white">{selectedVideoDetails.outlierScore}x</span>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col gap-0.5">
+                      <span className="text-[8px] uppercase tracking-widest text-zinc-500 font-bold">Engagement</span>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-brand-accent" />
+                        <span className="text-sm font-black text-white">{(selectedVideoDetails.engagement * 100).toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-medium">
+                    <Clock className="w-3 h-3" />
+                    <span>Uploaded {formatTimeAgo(selectedVideoDetails.postedAt)} ago</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-auto">
+                  <button 
+                    onClick={() => {
+                      if (!savedVideos.some(v => v.id === selectedVideoDetails.id)) {
+                        handleAddToLibrary(selectedVideoDetails);
+                      }
+                      setSelectedVideoDetails(null);
+                    }}
+                    className={`w-full py-2.5 font-black rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 text-xs ${
+                      savedVideos.some(v => v.id === selectedVideoDetails.id)
+                        ? 'bg-emerald-500 text-white cursor-default'
+                        : 'bg-brand-accent text-white hover:bg-brand-accent/90 shadow-brand-accent/20'
+                    }`}
+                  >
+                    {savedVideos.some(v => v.id === selectedVideoDetails.id) ? (
+                      <>
+                        <BookmarkCheck className="w-3.5 h-3.5" />
+                        Saved to Library
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-3.5 h-3.5" />
+                        Save to Library
+                      </>
+                    )}
+                  </button>
+                  <a 
+                    href={selectedVideoDetails.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all text-xs flex items-center justify-center gap-2"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View on {selectedVideoDetails.platform}
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
