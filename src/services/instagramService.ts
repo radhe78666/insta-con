@@ -32,13 +32,13 @@ export const fetchInstagramPostsPage = async (channelUrl: string, cursor: string
       cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
     }
 
-    const data = await fetchRapidApi('reels', { username: cleanUsername, maxId: cursor });
+    const data = await fetchRapidApi('posts', { username: cleanUsername, maxId: cursor });
     
     if (!data || !data.result || !data.result.edges) {
       return { videos: [], nextCursor: '' };
     }
 
-    const nodes = data.result.edges.map((edge: any) => edge.node?.media || edge.node);
+    const nodes = data.result.edges.map((edge: any) => edge.node);
     const videoNodes = nodes.filter((n: any) => n.media_type === 2 || n.video_versions || n.video_url);
 
     const endCursor = data.result.page_info?.has_next_page ? data.result.page_info?.end_cursor : '';
