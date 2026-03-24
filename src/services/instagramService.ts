@@ -40,7 +40,7 @@ export const fetchInstagramPosts = async (username: string): Promise<InstagramVi
       return {
         id: n.id || Math.random().toString(),
         channelId: cleanUsername,
-        thumbnailUrl: rawThumb,
+        thumbnailUrl: `/api/image-proxy?url=${encodeURIComponent(rawThumb)}`,
         caption: n.caption?.text || n.edge_media_to_caption?.edges?.[0]?.node?.text || '',
         views: n.view_count || n.play_count || Math.floor(Math.random() * 50000),
         engagement: n.like_count || n.edge_media_preview_like?.count || 0,
@@ -77,7 +77,7 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
       id: r.username || cleanUsername,
       username: r.username || cleanUsername,
       fullName: r.full_name || cleanUsername,
-      avatarUrl: rawAvatar,
+      avatarUrl: `/api/image-proxy?url=${encodeURIComponent(rawAvatar)}`,
       followers: r.follower_count || r.edge_followed_by?.count || 0,
       totalViews: 0,
       description: r.biography || '',
