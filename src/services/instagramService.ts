@@ -1,69 +1,54 @@
 import { InstagramVideo, InstagramChannel } from '../types';
 
-const APIFY_TOKEN = import.meta.env.VITE_APIFY_TOKEN;
+const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY || '53486e69damsh849d76ef8e45538p1b0650jsn3fbe496ab440';
+const RAPIDAPI_HOST = 'instagram120.p.rapidapi.com';
 
-export const fetchInstagramPosts = async (profileUrl: string): Promise<InstagramVideo[]> => {
+const fetchRapidApi = async (endpoint: string, body: any) => {
+  const res = await fetch(`https://${RAPIDAPI_HOST}/api/instagram/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-rapidapi-host': RAPIDAPI_HOST,
+      'x-rapidapi-key': RAPIDAPI_KEY
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`RapidAPI failed: ${res.statusText}`);
+  return await res.json();
+};
+
+export const fetchInstagramPosts = async (username: string): Promise<InstagramVideo[]> => {
   try {
-    const input = {
-      directUrls: [profileUrl],
-      resultsType: "posts",
-      resultsLimit: 20,
-      searchType: "hashtag",
-      searchLimit: 1,
-      addParentData: false
-    };
-
-    console.log('Starting Apify Actor for:', profileUrl);
-    
-    // 1. Run the actor
-    const runRes = await fetch(`https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/runs?token=${APIFY_TOKEN}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input)
-    });
-    
-    if (!runRes.ok) throw new Error(`Apify run failed: ${runRes.statusText}`);
-    
-    const runData = await runRes.json();
-    const runId = runData.data.id;
-    const datasetId = runData.data.defaultDatasetId;
-
-    console.log('Fetching results from dataset...', datasetId);
-    
-    // 2. Poll for completion
-    let status = runData.data.status;
-    let attempts = 0;
-    while (status !== 'SUCCEEDED' && attempts < 20) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const statusRes = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
-      const statusData = await statusRes.json();
-      status = statusData.data.status;
-      if (status === 'FAILED' || status === 'ABORTED') {
-        throw new Error(`Actor run failed with status: ${status}`);
-      }
-      attempts++;
+    let cleanUsername = username;
+    if (cleanUsername.includes('instagram.com/')) {
+      const parts = cleanUsername.split('instagram.com/');
+      cleanUsername = parts[1].split('/')[0];
+    } else {
+      cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
     }
 
-    // 3. Fetch dataset items
-    const datasetRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}`);
-    const items = await datasetRes.json();
+    const data = await fetchRapidApi('posts', { username: cleanUsername, maxId: '' });
+    
+    if (!data || !data.result || !data.result.edges) return [];
 
-    const formattedVideos: InstagramVideo[] = items.map((item: any) => ({
-      id: item.id || Math.random().toString(36).substr(2, 9),
-      channelId: item.ownerUsername || 'unknown',
-      thumbnailUrl: item.displayUrl || item.thumbnailSrc || 'https://via.placeholder.com/400x800',
-      caption: item.caption || '',
-      views: item.viewCount || Math.floor(Math.random() * 50000),
-      engagement: ((item.likesCount || 0) + (item.commentsCount || 0)) / (item.viewCount || 1000),
+    const nodes = data.result.edges.map((e: any) => e.node);
+    
+    const videoNodes = nodes.filter((n: any) => n.media_type === 2 || n.video_versions || n.video_url);
+
+    return videoNodes.map((n: any) => ({
+      id: n.id || Math.random().toString(),
+      channelId: n.user?.username || n.owner?.username || cleanUsername,
+      thumbnailUrl: n.image_versions2?.candidates?.[0]?.url || n.display_url || 'https://via.placeholder.com/400x800',
+      caption: n.caption?.text || n.edge_media_to_caption?.edges?.[0]?.node?.text || '',
+      views: n.view_count || n.play_count || Math.floor(Math.random() * 50000),
+      engagement: n.like_count || n.edge_media_preview_like?.count || 0,
       outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
-      postedAt: item.timestamp || new Date().toISOString(),
+      postedAt: new Date((n.taken_at || n.taken_at_timestamp) * 1000).toISOString(),
       platform: 'Instagram',
-      videoUrl: item.videoUrl || item.url || profileUrl,
+      videoUrl: n.video_versions?.[0]?.url || n.video_url || `https://www.instagram.com/p/${n.code}/`
     }));
-
-    return formattedVideos;
   } catch (error) {
-    console.error('Error fetching from Apify:', error);
+    console.error('Error fetching from RapidAPI:', error);
     return [];
   }
 };
@@ -78,60 +63,25 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
       cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
     }
 
-    const profileUrl = `https://www.instagram.com/${cleanUsername}/`;
+    const data = await fetchRapidApi('profile', { username: cleanUsername });
     
-    let input: any = {
-      directUrls: [profileUrl],
-      resultsType: "details",
-      resultsLimit: 1,
-      addParentData: false
-    };
+    if (!data || !data.result || !data.result.id) return [];
 
-    console.log('Starting Apify Actor for profile details:', profileUrl);
-    
-    const runRes = await fetch(`https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/runs?token=${APIFY_TOKEN}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input)
-    });
-    
-    if (!runRes.ok) throw new Error(`Apify run failed: ${runRes.statusText}`);
-    
-    const runData = await runRes.json();
-    const runId = runData.data.id;
-    const datasetId = runData.data.defaultDatasetId;
+    const r = data.result;
 
-    let status = runData.data.status;
-    let attempts = 0;
-    while (status !== 'SUCCEEDED' && attempts < 25) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const statusRes = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
-      const statusData = await statusRes.json();
-      status = statusData.data.status;
-      if (status === 'FAILED' || status === 'ABORTED') {
-        throw new Error(`Actor run failed with status: ${status}`);
-      }
-      attempts++;
-    }
-
-    const datasetRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}`);
-    const items = await datasetRes.json();
-
-    if (!items || items.length === 0) return [];
-
-    return items.slice(0, 5).map((item: any) => ({
-      id: item.id || item.username || Math.random().toString(),
-      username: item.username || 'unknown',
-      fullName: item.fullName || item.username || 'Unknown',
-      avatarUrl: item.profilePicUrl || item.profilePicUrlHD || 'https://via.placeholder.com/100',
-      followers: item.followersCount || 0,
+    return [{
+      id: r.id || cleanUsername,
+      username: r.username || cleanUsername,
+      fullName: r.full_name || cleanUsername,
+      avatarUrl: r.profile_pic_url || r.hd_profile_pic_url_info?.url || 'https://via.placeholder.com/100',
+      followers: r.follower_count || r.edge_followed_by?.count || 0,
       totalViews: 0,
-      description: item.biography || '',
+      description: r.biography || '',
       niche: 'Instagram User',
       platform: 'Instagram'
-    }));
+    }];
   } catch (error) {
-    console.error('Error fetching profile from Apify:', error);
+    console.error('Error fetching profile from RapidAPI:', error);
     return [];
   }
 };
