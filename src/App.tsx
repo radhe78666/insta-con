@@ -83,7 +83,7 @@ export default function App() {
     };
     
     fetchData();
-  }, [user]);
+  }, [user?.id]);
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -341,7 +341,12 @@ export default function App() {
               className="relative w-full max-w-2xl bg-[#1a1a1a] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto max-h-[90vh]"
             >
               {/* Left Side: Video Thumbnail */}
-              <div className="md:w-[40%] relative bg-black flex items-center justify-center group overflow-hidden aspect-[9/16] md:aspect-auto">
+              <a 
+                href={selectedVideoDetails.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="md:w-[40%] relative bg-black flex items-center justify-center group overflow-hidden aspect-[9/16] md:aspect-auto cursor-pointer block hover:opacity-90 transition-opacity"
+              >
                 <img 
                   src={selectedVideoDetails.thumbnailUrl} 
                   alt={selectedVideoDetails.caption}
@@ -359,7 +364,7 @@ export default function App() {
                   <Instagram className="w-3 h-3 text-brand-accent" />
                   <span className="text-[10px] font-bold text-white">Instagram</span>
                 </div>
-              </div>
+              </a>
 
               {/* Right Side: Details */}
               <div className="md:w-[60%] p-5 flex flex-col bg-brand-surface/50 overflow-y-auto">
