@@ -612,8 +612,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
             {isLoadingVideos ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-zinc-400 font-bold">Scraping real-time videos from Appify...</p>
-                <p className="text-zinc-600 text-xs mt-2">Checking {trackedChannels.length} channel(s). This may take up to 20-30 seconds.</p>
+                <p className="text-zinc-400 font-bold">Fetching real-time videos instantly...</p>
+                <p className="text-zinc-600 text-xs mt-2">Syncing channels directly from Instagram DB</p>
               </div>
             ) : filteredVideos.length === 0 && trackedChannels.length === 0 && initialView !== 'Library' ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
