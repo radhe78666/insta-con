@@ -177,7 +177,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
       if (sortBy === 'oldest') return new Date(a.postedAt).getTime() - new Date(b.postedAt).getTime();
       return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
     });
-  }, [initialView, savedVideos, searchQuery, sortBy, filters, trackedChannels]);
+  }, [initialView, savedVideos, apiVideos, searchQuery, sortBy, filters, trackedChannels]);
 
   const handleAddVideo = () => {
     if (videoUrl.trim()) {
