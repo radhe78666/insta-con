@@ -1,29 +1,53 @@
-import { ApifyClient } from 'apify-client';
 import { InstagramVideo } from '../types';
 
 const APIFY_TOKEN = import.meta.env.VITE_APIFY_TOKEN;
 
 export const fetchInstagramPosts = async (profileUrl: string): Promise<InstagramVideo[]> => {
   try {
-    const client = new ApifyClient({ token: APIFY_TOKEN });
-    
     const input = {
       directUrls: [profileUrl],
       resultsType: "posts",
-      resultsLimit: 20, // Keep limit small to run faster
+      resultsLimit: 20,
       searchType: "hashtag",
       searchLimit: 1,
       addParentData: false
     };
 
     console.log('Starting Apify Actor for:', profileUrl);
-    // Run the Actor and wait for it to finish
-    const run = await client.actor("shu8hvrXbJbY3Eb9W").call(input);
+    
+    // 1. Run the actor
+    const runRes = await fetch(`https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/runs?token=${APIFY_TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input)
+    });
+    
+    if (!runRes.ok) throw new Error(`Apify run failed: ${runRes.statusText}`);
+    
+    const runData = await runRes.json();
+    const runId = runData.data.id;
+    const datasetId = runData.data.defaultDatasetId;
 
-    console.log('Fetching results from dataset...', run.defaultDatasetId);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    console.log('Fetching results from dataset...', datasetId);
+    
+    // 2. Poll for completion
+    let status = runData.data.status;
+    let attempts = 0;
+    while (status !== 'SUCCEEDED' && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const statusRes = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
+      const statusData = await statusRes.json();
+      status = statusData.data.status;
+      if (status === 'FAILED' || status === 'ABORTED') {
+        throw new Error(`Actor run failed with status: ${status}`);
+      }
+      attempts++;
+    }
 
-    // Map Apify output to InstagramVideo types
+    // 3. Fetch dataset items
+    const datasetRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}`);
+    const items = await datasetRes.json();
+
     const formattedVideos: InstagramVideo[] = items.map((item: any) => ({
       id: item.id || Math.random().toString(36).substr(2, 9),
       channelId: item.ownerUsername || 'unknown',
@@ -31,7 +55,7 @@ export const fetchInstagramPosts = async (profileUrl: string): Promise<Instagram
       caption: item.caption || '',
       views: item.viewCount || Math.floor(Math.random() * 50000),
       engagement: ((item.likesCount || 0) + (item.commentsCount || 0)) / (item.viewCount || 1000),
-      outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10, // Mock outlier score for now
+      outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
       postedAt: item.timestamp || new Date().toISOString(),
       platform: 'Instagram',
       videoUrl: item.videoUrl || item.url || profileUrl,
