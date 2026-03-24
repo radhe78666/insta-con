@@ -79,18 +79,40 @@ const Discovery: React.FC<DiscoveryProps> = ({
     // Only load if not library
     if (initialView === 'Library') return;
     
+    if (trackedChannels.length === 0) {
+      setApiVideos([]);
+      setIsLoadingVideos(false);
+      return;
+    }
+
     let isMounted = true;
     setIsLoadingVideos(true);
-    // Using humansofny as default test subject for real-time
-    fetchInstagramPosts('https://www.instagram.com/humansofny/').then(videos => {
-      if (isMounted) {
-        // Fallback to MOCK_VIDEOS if Apify fails or returns empty array
-        setApiVideos(videos.length > 0 ? videos : MOCK_VIDEOS);
-        setIsLoadingVideos(false);
+    
+    const fetchAllVideos = async () => {
+      try {
+        const promises = trackedChannels.map(channel => 
+          fetchInstagramPosts(`https://www.instagram.com/${channel.username}/`)
+        );
+        const results = await Promise.all(promises);
+        if (isMounted) {
+          const allVideos = results.flat().sort((a, b) => 
+            new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()
+          );
+          setApiVideos(allVideos);
+          setIsLoadingVideos(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setApiVideos([]);
+          setIsLoadingVideos(false);
+        }
       }
-    });
+    };
+    
+    fetchAllVideos();
+
     return () => { isMounted = false; };
-  }, [initialView]);
+  }, [initialView, trackedChannels]);
 
   const categories = ['Trending', 'For You', 'Music', 'Sports', 'Entertainment', 'Tech', 'Gaming'];
 
@@ -110,7 +132,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const getChannel = (id: string) => trackedChannels.find(c => c.id === id);
 
   const filteredVideos = useMemo(() => {
-    let videos = initialView === 'Library' ? savedVideos : (apiVideos.length > 0 ? apiVideos : MOCK_VIDEOS);
+    let videos = initialView === 'Library' ? savedVideos : apiVideos;
 
     // Apply search and category
     if (searchQuery) {
@@ -590,8 +612,25 @@ const Discovery: React.FC<DiscoveryProps> = ({
             {isLoadingVideos ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-zinc-400 font-bold">Scraping real-time videos from Instagram...</p>
-                <p className="text-zinc-600 text-xs mt-2">This may take 15-30 seconds via Apify.</p>
+                <p className="text-zinc-400 font-bold">Scraping real-time videos from Appify...</p>
+                <p className="text-zinc-600 text-xs mt-2">Checking {trackedChannels.length} channel(s). This may take up to 20-30 seconds.</p>
+              </div>
+            ) : filteredVideos.length === 0 && trackedChannels.length === 0 && initialView !== 'Library' ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center">
+                <p className="text-zinc-400 font-bold mb-2">No channels tracked yet</p>
+                <p className="text-zinc-500 text-sm mb-6">Add channels to your tracking list to see their videos here.</p>
+                <button
+                  onClick={onOpenConfigure}
+                  className="px-6 py-3 bg-brand-accent text-white rounded-xl font-bold flex items-center gap-2 hover:bg-brand-accent/90 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Channels
+                </button>
+              </div>
+            ) : filteredVideos.length === 0 && initialView === 'Library' ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center">
+                <p className="text-zinc-400 font-bold">Your library is empty</p>
+                <p className="text-zinc-500 text-sm mt-2">Save videos to watch them later</p>
               </div>
             ) : filteredVideos.map((video) => {
               const channel = getChannel(video.channelId);

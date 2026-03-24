@@ -27,9 +27,15 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [user, setUser] = useState<User | null>(null);
-  const [savedVideos, setSavedVideos] = useState<InstagramVideo[]>([MOCK_VIDEOS[0], MOCK_VIDEOS[1]]);
+  const [savedVideos, setSavedVideos] = useState<InstagramVideo[]>(() => {
+    const saved = localStorage.getItem('savedVideos');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isFilterOpen, setIsFilterOpen] = useState(true);
-  const [trackedChannels, setTrackedChannels] = useState<InstagramChannel[]>(MOCK_CHANNELS);
+  const [trackedChannels, setTrackedChannels] = useState<InstagramChannel[]>(() => {
+    const saved = localStorage.getItem('trackedChannels');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [selectedVideoForAnalysis, setSelectedVideoForAnalysis] = useState<InstagramVideo | null>(null);
   const [selectedVideoDetails, setSelectedVideoDetails] = useState<InstagramVideo | null>(null);
@@ -65,6 +71,14 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  React.useEffect(() => {
+    localStorage.setItem('trackedChannels', JSON.stringify(trackedChannels));
+  }, [trackedChannels]);
+
+  React.useEffect(() => {
+    localStorage.setItem('savedVideos', JSON.stringify(savedVideos));
+  }, [savedVideos]);
 
   const handleLogin = (email: string) => {
     // Handled by Auth.tsx and onAuthStateChange
