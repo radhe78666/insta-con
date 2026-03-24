@@ -47,27 +47,8 @@ const ConfigureChannelModal: React.FC<ConfigureChannelModalProps> = ({
     setSearchResults([]);
 
     try {
-      let searchUsername = inputValue.trim();
-      
-      // Extract username from URL if they pasted one
-      if (searchUsername.includes('instagram.com/')) {
-        const parts = searchUsername.split('instagram.com/');
-        searchUsername = parts[1].split('/')[0];
-      } else if (searchUsername.startsWith('@')) {
-        searchUsername = searchUsername.slice(1);
-      } else if (activeTab === 'keyword') {
-        // Apify profile scraping currently requires a direct profile.
-        // We will assume keyword searches try the exact username too as a fallback feature.
-        searchUsername = searchUsername.toLowerCase().replace(/\s+/g, '');
-      }
-
-      const profile = await searchInstagramProfile(searchUsername);
-      
-      if (profile) {
-        setSearchResults([profile]);
-      } else {
-        setSearchResults([]);
-      }
+      const results = await searchInstagramProfile(inputValue.trim());
+      setSearchResults(results);
     } catch (error) {
       console.error(error);
       setSearchResults([]);

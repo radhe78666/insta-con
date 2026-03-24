@@ -68,19 +68,25 @@ export const fetchInstagramPosts = async (profileUrl: string): Promise<Instagram
   }
 };
 
-export const searchInstagramProfile = async (username: string): Promise<InstagramChannel | null> => {
+export const searchInstagramProfile = async (query: string): Promise<InstagramChannel[]> => {
   try {
-    const cleanUsername = username.replace('@', '').trim();
-    const profileUrl = `https://www.instagram.com/${cleanUsername}/`;
-    
-    const input = {
-      directUrls: [profileUrl],
+    const isUrl = query.includes('instagram.com/');
+    let input: any = {
       resultsType: "details",
-      resultsLimit: 1,
+      resultsLimit: isUrl ? 1 : 5,
       addParentData: false
     };
 
-    console.log('Starting Apify Actor for profile details:', profileUrl);
+    if (isUrl) {
+      input.directUrls = [query];
+    } else {
+      let keyword = query.startsWith('@') ? query.slice(1) : query;
+      input.search = keyword;
+      input.searchType = "user";
+      input.searchLimit = 5;
+    }
+
+    console.log('Starting Apify Actor for profile details:', query);
     
     const runRes = await fetch(`https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/runs?token=${APIFY_TOKEN}`, {
       method: 'POST',
@@ -96,7 +102,7 @@ export const searchInstagramProfile = async (username: string): Promise<Instagra
 
     let status = runData.data.status;
     let attempts = 0;
-    while (status !== 'SUCCEEDED' && attempts < 20) {
+    while (status !== 'SUCCEEDED' && attempts < 25) {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const statusRes = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
       const statusData = await statusRes.json();
@@ -110,23 +116,21 @@ export const searchInstagramProfile = async (username: string): Promise<Instagra
     const datasetRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}`);
     const items = await datasetRes.json();
 
-    if (!items || items.length === 0) return null;
+    if (!items || items.length === 0) return [];
 
-    const item = items[0];
-    
-    return {
-      id: item.id || cleanUsername,
-      username: item.username || cleanUsername,
-      fullName: item.fullName || cleanUsername,
+    return items.slice(0, 5).map((item: any) => ({
+      id: item.id || item.username || Math.random().toString(),
+      username: item.username || 'unknown',
+      fullName: item.fullName || item.username || 'Unknown',
       avatarUrl: item.profilePicUrl || item.profilePicUrlHD || 'https://via.placeholder.com/100',
       followers: item.followersCount || 0,
       totalViews: 0,
       description: item.biography || '',
       niche: 'Instagram User',
       platform: 'Instagram'
-    };
+    }));
   } catch (error) {
     console.error('Error fetching profile from Apify:', error);
-    return null;
+    return [];
   }
 };
