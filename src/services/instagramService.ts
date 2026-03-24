@@ -70,23 +70,24 @@ export const fetchInstagramPosts = async (profileUrl: string): Promise<Instagram
 
 export const searchInstagramProfile = async (query: string): Promise<InstagramChannel[]> => {
   try {
-    const isUrl = query.includes('instagram.com/');
+    let cleanUsername = query.trim();
+    if (cleanUsername.includes('instagram.com/')) {
+      const parts = cleanUsername.split('instagram.com/');
+      cleanUsername = parts[1].split('/')[0];
+    } else {
+      cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
+    }
+
+    const profileUrl = `https://www.instagram.com/${cleanUsername}/`;
+    
     let input: any = {
+      directUrls: [profileUrl],
       resultsType: "details",
-      resultsLimit: isUrl ? 1 : 5,
+      resultsLimit: 1,
       addParentData: false
     };
 
-    if (isUrl) {
-      input.directUrls = [query];
-    } else {
-      let keyword = query.startsWith('@') ? query.slice(1) : query;
-      input.search = keyword;
-      input.searchType = "user";
-      input.searchLimit = 5;
-    }
-
-    console.log('Starting Apify Actor for profile details:', query);
+    console.log('Starting Apify Actor for profile details:', profileUrl);
     
     const runRes = await fetch(`https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/runs?token=${APIFY_TOKEN}`, {
       method: 'POST',
