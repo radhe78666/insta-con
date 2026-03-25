@@ -42,6 +42,12 @@ export default function App() {
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
   const [channelCursors, setChannelCursors] = useState<Record<string, string>>({});
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['dashboard']));
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setVisitedTabs(prev => new Set(prev).add(tab));
+  };
 
   React.useEffect(() => {
     if (!user) {
@@ -250,23 +256,8 @@ export default function App() {
     return <Auth onLogin={handleLogin} />;
   }
 
-  const renderContent = () => {
-    if (activeTab === 'analysis' && selectedVideoForAnalysis) {
-      return (
-        <Analysis 
-          video={selectedVideoForAnalysis}
-          channel={trackedChannels.find(c => c.id === selectedVideoForAnalysis.channelId)}
-          onBack={() => setActiveTab('library')}
-          onViewDetails={(video) => setSelectedVideoDetails(video)}
-          onRemove={(id) => {
-            handleRemoveFromLibrary(id);
-            setActiveTab('library');
-          }}
-        />
-      );
-    }
-
-    switch (activeTab) {
+  const renderComponent = (tab: string) => {
+    switch (tab) {
       case 'dashboard':
         return <Dashboard user={user} />;
       case 'discovery':
@@ -326,12 +317,29 @@ export default function App() {
             }}
             selectedVideoDetails={selectedVideoDetails}
             setSelectedVideoDetails={setSelectedVideoDetails}
+            apiVideos={[]}
+            setApiVideos={() => {}}
+            isLoadingVideos={false}
+            setIsLoadingVideos={() => {}}
           />
         );
       case 'channels':
         return <Channels setActiveTab={setActiveTab} trackedChannels={trackedChannels} onOpenConfigure={() => setIsConfigureModalOpen(true)} onRemoveChannel={handleRemoveChannel} />;
+      case 'analysis':
+        return selectedVideoForAnalysis ? (
+          <Analysis 
+            video={selectedVideoForAnalysis}
+            channel={trackedChannels.find(c => c.id === selectedVideoForAnalysis.channelId)}
+            onBack={() => handleTabChange('library')}
+            onViewDetails={(video) => setSelectedVideoDetails(video)}
+            onRemove={(id) => {
+              handleRemoveFromLibrary(id);
+              handleTabChange('library');
+            }}
+          />
+        ) : null;
       default:
-        return <Dashboard user={user} />;
+        return null;
     }
   };
 
@@ -339,24 +347,23 @@ export default function App() {
     <div className="flex min-h-screen bg-brand-bg">
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         user={user} 
         onLogout={handleLogout} 
       />
       
       <main className="flex-1 pl-20 transition-all duration-300">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
-            className="h-full"
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
+        <div className="h-full relative">
+          {['dashboard', 'discovery', 'videos', 'library', 'channels', 'analysis'].map((tab) => (
+            <div 
+              key={tab}
+              className={`h-full w-full ${activeTab === tab ? 'opacity-100 visible' : 'opacity-0 invisible absolute inset-0 pointer-events-none'}`}
+              style={{ transition: 'opacity 0.2s ease-in-out' }}
+            >
+              {visitedTabs.has(tab) && renderComponent(tab)}
+            </div>
+          ))}
+        </div>
       </main>
 
       <ConfigureChannelModal 
