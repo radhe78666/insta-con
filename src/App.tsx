@@ -56,7 +56,6 @@ export default function App() {
           fullName: c.full_name,
           avatarUrl: c.avatar_url || '',
           followers: c.followers || 0,
-          totalViews: 0,
           description: c.description || '',
           niche: 'Instagram User',
           platform: c.platform || 'Instagram'

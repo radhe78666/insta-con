@@ -116,7 +116,6 @@ const Channels: React.FC<ChannelsProps> = ({ setActiveTab, trackedChannels, onOp
                   >
                     {[
                       { label: 'Name', value: 'name' },
-                      { label: 'Total Views', value: 'views' },
                       { label: 'Followers', value: 'followers' }
                     ].map((option) => (
                       <button
@@ -176,10 +175,6 @@ const Channels: React.FC<ChannelsProps> = ({ setActiveTab, trackedChannels, onOp
                     <span className="text-xs font-bold text-zinc-400">
                       {formatNumber(channel.followers)} {channel.platform === 'YouTube' ? 'subscribers' : 'followers'}
                     </span>
-                    <span className="text-xs font-bold text-zinc-500">•</span>
-                    <span className="text-xs font-bold text-zinc-400">
-                      {formatNumber(channel.totalViews)} views
-                    </span>
                   </div>
                 </div>
               </div>
@@ -189,9 +184,14 @@ const Channels: React.FC<ChannelsProps> = ({ setActiveTab, trackedChannels, onOp
               </p>
 
               <div className="flex items-center gap-2">
-                <button className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-white font-bold text-xs hover:bg-white/10 transition-all">
+                <a 
+                  href={`https://www.instagram.com/${channel.username}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-white font-bold text-xs hover:bg-white/10 transition-all flex items-center justify-center"
+                >
                   View Channel
-                </button>
+                </a>
                 <button 
                   onClick={() => onRemoveChannel(channel.id)}
                   className="px-3 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"

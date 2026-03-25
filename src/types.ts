@@ -22,7 +22,6 @@ export interface InstagramChannel {
   fullName: string;
   avatarUrl: string;
   followers: number;
-  totalViews: number;
   description: string;
   niche: string;
   platform: 'Instagram' | 'YouTube' | 'TikTok';

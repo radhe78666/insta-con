@@ -99,7 +99,6 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
       fullName: r.full_name || cleanUsername,
       avatarUrl: `/api/image-proxy?url=${encodeURIComponent(rawAvatar)}`,
       followers: r.follower_count || r.edge_followed_by?.count || 0,
-      totalViews: 0,
       description: r.biography || '',
       niche: 'Instagram User',
       platform: 'Instagram'
