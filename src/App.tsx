@@ -35,6 +35,13 @@ export default function App() {
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [selectedVideoForAnalysis, setSelectedVideoForAnalysis] = useState<InstagramVideo | null>(null);
   const [selectedVideoDetails, setSelectedVideoDetails] = useState<InstagramVideo | null>(null);
+  
+  // Cache for Feed and Discovery videos
+  const [feedVideos, setFeedVideos] = useState<InstagramVideo[]>([]);
+  const [discoveryVideos, setDiscoveryVideos] = useState<InstagramVideo[]>([]);
+  const [isLoadingFeed, setIsLoadingFeed] = useState(false);
+  const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
+  const [channelCursors, setChannelCursors] = useState<Record<string, string>>({});
 
   React.useEffect(() => {
     if (!user) {
@@ -275,6 +282,12 @@ export default function App() {
             onOpenConfigure={() => setIsConfigureModalOpen(true)}
             selectedVideoDetails={selectedVideoDetails}
             setSelectedVideoDetails={setSelectedVideoDetails}
+            apiVideos={feedVideos}
+            setApiVideos={setFeedVideos}
+            isLoadingVideos={isLoadingFeed}
+            setIsLoadingVideos={setIsLoadingFeed}
+            channelCursors={channelCursors}
+            setChannelCursors={setChannelCursors}
           />
         );
       case 'videos':
@@ -290,6 +303,10 @@ export default function App() {
             onOpenConfigure={() => setIsConfigureModalOpen(true)}
             selectedVideoDetails={selectedVideoDetails}
             setSelectedVideoDetails={setSelectedVideoDetails}
+            apiVideos={discoveryVideos}
+            setApiVideos={setDiscoveryVideos}
+            isLoadingVideos={isLoadingDiscovery}
+            setIsLoadingVideos={setIsLoadingDiscovery}
           />
         );
       case 'library':

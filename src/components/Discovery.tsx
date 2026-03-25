@@ -45,21 +45,24 @@ interface DiscoveryProps {
   onOpenConfigure: () => void;
   selectedVideoDetails: InstagramVideo | null;
   setSelectedVideoDetails: (video: InstagramVideo | null) => void;
+  // Shared state for caching
+  apiVideos: InstagramVideo[];
+  setApiVideos: (videos: InstagramVideo[]) => void;
+  isLoadingVideos: boolean;
+  setIsLoadingVideos: (isLoading: boolean) => void;
+  channelCursors?: Record<string, string>;
+  setChannelCursors?: (cursors: Record<string, string>) => void;
 }
 
-const Discovery: React.FC<DiscoveryProps> = ({ 
-  onAddToLibrary, 
-  onRemoveFromLibrary,
-  onViewAnalysis,
-  savedVideos, 
-  initialView, 
-  setActiveTab,
-  isFilterOpen,
-  setIsFilterOpen,
-  trackedChannels,
   onOpenConfigure,
   selectedVideoDetails,
-  setSelectedVideoDetails
+  setSelectedVideoDetails,
+  apiVideos,
+  setApiVideos,
+  isLoadingVideos,
+  setIsLoadingVideos,
+  channelCursors,
+  setChannelCursors
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Trending');
@@ -72,14 +75,11 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const [isLibraryPulsing, setIsLibraryPulsing] = useState(false);
   const [showDevNotice, setShowDevNotice] = useState(initialView === 'Videos');
   const libraryButtonRef = useRef<HTMLButtonElement>(null);
-  const [apiVideos, setApiVideos] = useState<InstagramVideo[]>([]);
-  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
-  const [channelCursors, setChannelCursors] = useState<Record<string, string>>({});
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   React.useEffect(() => {
-    // load feed if Feed, load discovery if Videos
-    if (initialView === 'Library') return;
+    // Skip if Library or if we already have cached videos
+    if (initialView === 'Library' || apiVideos.length > 0) return;
     
     if (initialView === 'Videos') {
       setIsLoadingVideos(true);
@@ -96,7 +96,6 @@ const Discovery: React.FC<DiscoveryProps> = ({
       return;
     }
 
-    let isMounted = true;
     setIsLoadingVideos(true);
     
     const fetchInitialVideos = async () => {
@@ -109,22 +108,24 @@ const Discovery: React.FC<DiscoveryProps> = ({
           newCursors[channel.username] = result.nextCursor || '';
           return result.videos;
         });
-        
+
         const results = await Promise.all(promises);
         allVideos = results.flat();
       } catch (err) {}
 
-      if (isMounted) {
-        setApiVideos(allVideos.sort((a,b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
-        setChannelCursors(newCursors);
+        if (setChannelCursors) {
+          setChannelCursors(newCursors);
+        }
+        setApiVideos(allVideos.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
+      } catch (err) {
+        console.error('Error fetching initial videos:', err);
+      } finally {
         setIsLoadingVideos(false);
       }
     };
-    
-    fetchInitialVideos();
 
-    return () => { isMounted = false; };
-  }, [initialView, trackedChannels]);
+    fetchInitialVideos();
+  }, [trackedChannels, initialView, apiVideos.length]);
 
   const categories = ['Trending', 'For You', 'Music', 'Sports', 'Entertainment', 'Tech', 'Gaming'];
 
