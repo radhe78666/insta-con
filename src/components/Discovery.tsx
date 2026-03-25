@@ -23,7 +23,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { InstagramVideo, InstagramChannel, FilterConfig } from '../types';
 import { MOCK_VIDEOS } from '../mockData';
-import { fetchInstagramPostsPage } from '../services/instagramService';
+import { fetchInstagramPostsPage, fetchDiscoveryVideos } from '../services/instagramService';
 
 interface FlyingVideo {
   id: string;
@@ -78,9 +78,18 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   React.useEffect(() => {
-    // Only load if not library
+    // load feed if Feed, load discovery if Videos
     if (initialView === 'Library') return;
     
+    if (initialView === 'Videos') {
+      setIsLoadingVideos(true);
+      fetchDiscoveryVideos().then(videos => {
+        setApiVideos(videos);
+        setIsLoadingVideos(false);
+      });
+      return;
+    }
+
     if (trackedChannels.length === 0) {
       setApiVideos([]);
       setIsLoadingVideos(false);
@@ -132,7 +141,20 @@ const Discovery: React.FC<DiscoveryProps> = ({
 
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'views' | 'outlier' | 'engagement'>('newest');
 
-  const getChannel = (id: string) => trackedChannels.find(c => c.id === id);
+  const getChannel = (id: string) => {
+    return trackedChannels.find(c => c.id === id) || {
+      id,
+      username: id,
+      fullName: id.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${id}&backgroundColor=1a1a1a&textColor=ffffff`,
+      followers: Math.floor(Math.random() * 2000000) + 100000,
+      totalViews: 0,
+      description: '',
+      niche: 'Discovery',
+      platform: 'Instagram'
+    } as InstagramChannel;
+  };
+
 
   const filteredVideos = useMemo(() => {
     let videos = initialView === 'Library' ? savedVideos : apiVideos;
@@ -645,9 +667,19 @@ const Discovery: React.FC<DiscoveryProps> = ({
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4"></div>
                 <p className="text-zinc-400 font-bold">Fetching real-time videos instantly...</p>
-                <p className="text-zinc-600 text-xs mt-2">Syncing channels directly from Instagram DB</p>
+                <p className="text-zinc-600 text-xs mt-2">
+                  {initialView === 'Videos' ? 'Discovering top recommended content for you...' : 'Syncing channels directly from Instagram DB'}
+                </p>
               </div>
-            ) : filteredVideos.length === 0 && trackedChannels.length === 0 && initialView !== 'Library' ? (
+            ) : initialView === 'Videos' && filteredVideos.length === 0 ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-zinc-500" />
+                </div>
+                <p className="text-zinc-300 font-black text-xl mb-2">No results for "{searchQuery}"</p>
+                <p className="text-zinc-500 text-sm">Try searching for something else in the Discovery engine.</p>
+              </div>
+            ) : filteredVideos.length === 0 && trackedChannels.length === 0 && initialView === 'Feed' ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <p className="text-zinc-400 font-bold mb-2">No channels tracked yet</p>
                 <p className="text-zinc-500 text-sm mb-6">Add channels to your tracking list to see their videos here.</p>

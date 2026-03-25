@@ -109,3 +109,68 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
     return [];
   }
 };
+export const fetchDiscoveryVideos = async (): Promise<InstagramVideo[]> => {
+  // Demo videos for Discovery section
+  return [
+    {
+      id: 'disco-1',
+      channelId: 'nature.enthusiast',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?auto=format&fit=crop&q=80&w=400&h=700',
+      caption: 'Unbelievable 4K footage of the Northern Lights in Iceland! 🌌✨ Nature at its most majestic. #nature #iceland #northernlights #travelgram',
+      views: 1250000,
+      engagement: 0.12,
+      outlierScore: 4.5,
+      postedAt: new Date().toISOString(),
+      platform: 'Instagram',
+      videoUrl: 'https://www.instagram.com/reels/'
+    },
+    {
+      id: 'disco-2',
+      channelId: 'tech_insider',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1678911820864-e2c567c655d7?auto=format&fit=crop&q=80&w=400&h=700',
+      caption: 'The future is here! This new AI glasses can translate any language in real-time. 👓🤖 #tech #ai #innovation #futuretech',
+      views: 890000,
+      engagement: 0.08,
+      outlierScore: 3.2,
+      postedAt: new Date().toISOString(),
+      platform: 'Instagram',
+      videoUrl: 'https://www.instagram.com/reels/'
+    },
+    {
+      id: 'disco-3',
+      channelId: 'chef_master',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1695653422715-991ec3a0db7a?auto=format&fit=crop&q=80&w=400&h=700',
+      caption: 'The secret to the perfect 30-second steak. 🥩🔥 You HAVE to try this butter-basting technique! #cooking #steak #foodie #chefskills',
+      views: 2100000,
+      engagement: 0.15,
+      outlierScore: 5.8,
+      postedAt: new Date().toISOString(),
+      platform: 'Instagram',
+      videoUrl: 'https://www.instagram.com/reels/'
+    },
+    {
+      id: 'disco-4',
+      channelId: 'fitness_motivation',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&q=80&w=400&h=700',
+      caption: 'No gym? No problem. Try this 5-minute morning routine to kickstart your metabolism! 💪⚡ #fitness #homeworkout #healthylifestyle',
+      views: 450000,
+      engagement: 0.06,
+      outlierScore: 2.1,
+      postedAt: new Date().toISOString(),
+      platform: 'Instagram',
+      videoUrl: 'https://www.instagram.com/reels/'
+    },
+    {
+      id: 'disco-5',
+      channelId: 'cyber_news',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=400&h=700',
+      caption: 'Top 5 AI tools you need to know in 2026. Number 3 will change everything! 🚀💻 #ai #software #productivity #trends',
+      views: 3200000,
+      engagement: 0.09,
+      outlierScore: 6.2,
+      postedAt: new Date().toISOString(),
+      platform: 'Instagram',
+      videoUrl: 'https://www.instagram.com/reels/'
+    }
+  ];
+};
