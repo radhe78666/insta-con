@@ -8,6 +8,7 @@ import Discovery from './components/Discovery';
 import Channels from './components/Channels';
 import Analysis from './components/Analysis';
 import Auth from './components/Auth';
+import ResetPassword from './components/ResetPassword';
 import ConfigureChannelModal from './components/ConfigureChannelModal';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -25,6 +26,7 @@ import {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [savedVideos, setSavedVideos] = useState<InstagramVideo[]>([]);
@@ -114,7 +116,21 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Handle recovery flow detection
+    const handleHashCheck = () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('type=recovery')) {
+        setIsResettingPassword(true);
+      }
+    };
+
+    handleHashCheck();
+    window.addEventListener('hashchange', handleHashCheck);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('hashchange', handleHashCheck);
+    };
   }, []);
 
 
@@ -211,6 +227,18 @@ export default function App() {
     if (diffInDays < 7) return `${diffInDays}d`;
     return date.toLocaleDateString();
   };
+
+  if (isResettingPassword) {
+    return (
+      <ResetPassword 
+        onComplete={() => {
+          setIsResettingPassword(false);
+          // Clear hash to prevent re-triggering
+          window.location.hash = '';
+        }} 
+      />
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return <Auth onLogin={handleLogin} />;
