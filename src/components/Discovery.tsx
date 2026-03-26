@@ -852,7 +852,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
           </div>
 
           {/* Load More Button */}
-          {initialView !== 'Library' && filteredVideos.length > 0 && Object.values(channelCursors).some(c => !!c) && (
+          {initialView !== 'Library' && filteredVideos.length > 0 && channelCursors && Object.values(channelCursors).some(c => !!c) && (
             <div className="flex justify-center mt-10 mb-8">
               <button 
                 onClick={handleLoadMore}
