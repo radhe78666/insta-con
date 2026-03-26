@@ -266,7 +266,7 @@ export default function App() {
             onAddToLibrary={handleAddToLibrary} 
             savedVideos={savedVideos} 
             initialView="Feed" 
-            setActiveTab={setActiveTab} 
+            setActiveTab={handleTabChange} 
             isFilterOpen={isFilterOpen} 
             setIsFilterOpen={setIsFilterOpen} 
             trackedChannels={trackedChannels} 
@@ -287,7 +287,7 @@ export default function App() {
             onAddToLibrary={handleAddToLibrary} 
             savedVideos={savedVideos} 
             initialView="Videos" 
-            setActiveTab={setActiveTab} 
+            setActiveTab={handleTabChange} 
             isFilterOpen={isFilterOpen} 
             setIsFilterOpen={setIsFilterOpen} 
             trackedChannels={trackedChannels} 
@@ -306,7 +306,7 @@ export default function App() {
             onAddToLibrary={handleAddToLibrary} 
             savedVideos={savedVideos} 
             initialView="Library" 
-            setActiveTab={setActiveTab} 
+            setActiveTab={handleTabChange} 
             isFilterOpen={isFilterOpen} 
             setIsFilterOpen={setIsFilterOpen} 
             trackedChannels={trackedChannels} 
@@ -324,7 +324,7 @@ export default function App() {
           />
         );
       case 'channels':
-        return <Channels setActiveTab={setActiveTab} trackedChannels={trackedChannels} onOpenConfigure={() => setIsConfigureModalOpen(true)} onRemoveChannel={handleRemoveChannel} />;
+        return <Channels setActiveTab={handleTabChange} trackedChannels={trackedChannels} onOpenConfigure={() => setIsConfigureModalOpen(true)} onRemoveChannel={handleRemoveChannel} />;
       case 'analysis':
         return selectedVideoForAnalysis ? (
           <Analysis 
