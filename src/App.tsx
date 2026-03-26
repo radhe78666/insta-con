@@ -352,13 +352,14 @@ export default function App() {
         onLogout={handleLogout} 
       />
       
-      <main className="flex-1 pl-20 transition-all duration-300">
-        <div className="h-full relative">
+      <main className="flex-1 pl-20 transition-all duration-300 h-screen">
+        <div className="h-full w-full relative overflow-hidden">
           {['dashboard', 'discovery', 'videos', 'library', 'channels', 'analysis'].map((tab) => (
             <div 
               key={tab}
-              className={`h-full w-full ${activeTab === tab ? 'opacity-100 visible' : 'opacity-0 invisible absolute inset-0 pointer-events-none'}`}
-              style={{ transition: 'opacity 0.2s ease-in-out' }}
+              className={`absolute inset-0 w-full h-full overflow-y-auto ${
+                activeTab === tab ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+              }`}
             >
               {visitedTabs.has(tab) && renderComponent(tab)}
             </div>
