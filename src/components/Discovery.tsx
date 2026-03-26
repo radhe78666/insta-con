@@ -54,6 +54,16 @@ interface DiscoveryProps {
   setChannelCursors?: (cursors: Record<string, string>) => void;
 }
 
+const Discovery: React.FC<DiscoveryProps> = ({ 
+  onAddToLibrary, 
+  onRemoveFromLibrary,
+  onViewAnalysis,
+  savedVideos, 
+  initialView, 
+  setActiveTab,
+  isFilterOpen,
+  setIsFilterOpen,
+  trackedChannels,
   onOpenConfigure,
   selectedVideoDetails,
   setSelectedVideoDetails,
@@ -111,7 +121,6 @@ interface DiscoveryProps {
 
         const results = await Promise.all(promises);
         allVideos = results.flat();
-      } catch (err) {}
 
         if (setChannelCursors) {
           setChannelCursors(newCursors);
