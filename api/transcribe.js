@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   }
   // -----------------------------------
 
-  const DEEPGRAM_API_KEY = (process.env.VITE_DEEPGRAM_API_KEY || process.env.DEEPGRAM_API_KEY || 'd0375d9f62775455b85125e783dbe4beb2397fc4').trim();
+  const DEEPGRAM_API_KEY = process.env.VITE_DEEPGRAM_API_KEY || process.env.DEEPGRAM_API_KEY;
 
   if (!DEEPGRAM_API_KEY) {
     console.error('Missing DEEPGRAM_API_KEY in environment variables');
