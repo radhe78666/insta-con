@@ -1,4 +1,4 @@
-const DEEPGRAM_API_KEY = import.meta.env.VITE_DEEPGRAM_API_KEY;
+const DEEPGRAM_API_KEY = import.meta.env.VITE_DEEPGRAM_API_KEY || 'd0375d9f62775455b85125e783dbe4beb2397fc4';
 
 export interface TranscriptionResponse {
   transcript: string;

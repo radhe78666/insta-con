@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyAPSKmpr2TRnFok2ySBS1EzPZc4kEZPFEI';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export interface AIAnalysis {
