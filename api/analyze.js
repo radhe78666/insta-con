@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   }
   // -----------------------------------
 
-  const GEMINI_API_KEY = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const GEMINI_API_KEY = (process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'AIzaSyAPSKmpr2TRnFok2ySBS1EzPZc4kEZPFEI').trim();
 
   if (!GEMINI_API_KEY) {
     console.error('Missing GEMINI_API_KEY in environment variables');
@@ -41,27 +41,26 @@ export default async function handler(req, res) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-    Analyze the following video transcript and provide a structured JSON response in English ONLY. 
-    The response must strictly follow this JSON structure:
+    Analyze the following video transcript and extract the key elements. You MUST MUST MUST respond with a valid JSON block, and absolutely NOTHING ELSE. Do not include markdown formatting or backticks around the json. The output must strictly follow this JSON structure in English:
+    
     {
-      "summary": "Full summary of the video content",
-      "hooks": [{"formula": "The pattern used", "text": "The actual hook used", "analysis": "Why it works"}],
-      "idea_analysis": {
-        "topic": "Main subject",
-        "idea_seed": "The core idea",
-        "unique_angle": "What makes it different",
-        "common_belief_to_challenge": "What people usually think",
-        "contrarian_reality": "The truth exposed in the video"
+      "hook": {
+        "formula": "Brief formula string (e.g., Question + Benefit)",
+        "explanation": "Why this specific hook works to retain the viewer.",
+        "text": "The exact hook sentence from the transcript."
+      },
+      "idea": {
+        "topic": "The main overarching topic of the video.",
+        "seeds": ["Idea variation 1", "Idea variation 2"],
+        "summary": "A 1-2 sentence summary of the core premise."
       },
       "storytelling": {
-        "category": "e.g. Case Study, Personal Story, Tutorial",
-        "description": "How the story is told",
-        "analysis": "Effectiveness of this style"
+        "category": "One of: Educational, Entertainment, Storytime, Rant, Listicle",
+        "analysis": "How the creator structures the narrative."
       },
-      "visual_layout": {
-        "category": "e.g. Studio, Outdoor, Screen Share",
-        "sub_category": "e.g. Podcast, Vlog, Documentary",
-        "visual_elements": ["List of key visual components"]
+      "layout": {
+        "scene": "What kind of footage is shown (e.g., Talking Head, B-roll overlay)",
+        "visuals": ["Visual element 1", "Visual element 2"]
       }
     }
     

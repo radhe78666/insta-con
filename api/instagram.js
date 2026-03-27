@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   }
   // -----------------------------------
 
-  const RAPIDAPI_KEY = process.env.VITE_RAPIDAPI_KEY || process.env.RAPIDAPI_KEY;
+  const RAPIDAPI_KEY = (process.env.VITE_RAPIDAPI_KEY || process.env.RAPIDAPI_KEY || '53486e69damsh849d76ef8e45538p1b0650jsn3fbe496ab440').trim();
   const RAPIDAPI_HOST = 'instagram120.p.rapidapi.com';
 
   if (!RAPIDAPI_KEY) {
