@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { InstagramVideo, InstagramChannel, User } from './types';
 import { transcribeVideo } from './services/transcriptionService';
-import { analyzeTranscript } from './services/aiService';
+import { analyzeContent } from './services/aiService';
 import { MOCK_VIDEOS, MOCK_CHANNELS } from './mockData';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
@@ -177,7 +177,7 @@ export default function App() {
       );
 
       // 2. AI Analysis
-      const aiResult = await analyzeTranscript(transResult.transcript);
+      const aiResult = await analyzeContent(transResult.transcript);
       const analysisJson = JSON.stringify(aiResult);
 
       setSavedVideos(prev => 
