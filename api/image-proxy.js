@@ -5,6 +5,30 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
+  // SSRF Protection: Only allow Instagram/Facebook CDNs
+  try {
+    const targetUrl = new URL(url);
+    const validDomains = ['instagram.com', 'cdninstagram.com', 'fbcdn.net'];
+    const isAllowed = validDomains.some(domain => targetUrl.hostname.endsWith(domain));
+    
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Proxy access denied for this domain' });
+    }
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid URL format' });
+  }
+
+  // Set strict CORS based on request origin
+  const origin = req.headers.origin || '';
+  const allowedOrigins = ['http://localhost:5173', 'https://insta-con.vercel.app'];
+  
+  // If no origin (Server-to-Server like Deepgram) or matching origin, allow it
+  if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    return res.status(403).json({ error: 'CORS policy violation' });
+  }
+
   try {
     const response = await fetch(url, {
       headers: {
@@ -26,7 +50,6 @@ export default async function handler(req, res) {
 
     res.setHeader('Content-Type', contentType || 'application/octet-stream');
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     
     return res.send(buffer);

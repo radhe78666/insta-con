@@ -1,19 +1,17 @@
 import { InstagramVideo, InstagramChannel } from '../types';
 
-const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY || '53486e69damsh849d76ef8e45538p1b0650jsn3fbe496ab440';
-const RAPIDAPI_HOST = 'instagram120.p.rapidapi.com';
-
 const fetchRapidApi = async (endpoint: string, body: any) => {
-  const res = await fetch(`https://${RAPIDAPI_HOST}/api/instagram/${endpoint}`, {
+  const res = await fetch(`/api/instagram`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-rapidapi-host': RAPIDAPI_HOST,
-      'x-rapidapi-key': RAPIDAPI_KEY
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify({
+      action: endpoint,
+      payload: body
+    })
   });
-  if (!res.ok) throw new Error(`RapidAPI failed: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Backend proxy failed: ${res.statusText}`);
   return await res.json();
 };
 
