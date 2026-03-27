@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 export interface TranscriptionResponse {
   transcript: string;
   language: string;
@@ -7,11 +9,16 @@ export interface TranscriptionResponse {
 
 export const transcribeVideo = async (videoUrl: string): Promise<TranscriptionResponse> => {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
     const response = await fetch('/api/transcribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
+
       body: JSON.stringify({ videoUrl }),
     });
 

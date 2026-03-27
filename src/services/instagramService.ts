@@ -1,11 +1,17 @@
 import { InstagramVideo, InstagramChannel } from '../types';
+import { supabase } from '../lib/supabase';
 
 const fetchRapidApi = async (endpoint: string, body: any) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
   const res = await fetch(`/api/instagram`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
+
     body: JSON.stringify({
       action: endpoint,
       payload: body
