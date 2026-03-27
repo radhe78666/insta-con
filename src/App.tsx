@@ -374,11 +374,15 @@ export default function App() {
         );
       case 'channels':
         return <Channels setActiveTab={handleTabChange} trackedChannels={trackedChannels} onOpenConfigure={() => setIsConfigureModalOpen(true)} onRemoveChannel={handleRemoveChannel} />;
-      case 'analysis':
-        return selectedVideoForAnalysis ? (
+      case 'analysis': {
+        const currentVideo = selectedVideoForAnalysis 
+          ? (savedVideos.find(v => v.id === selectedVideoForAnalysis.id) || selectedVideoForAnalysis)
+          : null;
+          
+        return currentVideo ? (
           <Analysis 
-            video={selectedVideoForAnalysis}
-            channel={trackedChannels.find(c => c.id === selectedVideoForAnalysis.channelId)}
+            video={currentVideo}
+            channel={trackedChannels.find(c => c.id === currentVideo.channelId)}
             onBack={() => handleTabChange('library')}
             onViewDetails={(video) => setSelectedVideoDetails(video)}
             onRemove={(id) => {
@@ -387,6 +391,7 @@ export default function App() {
             }}
           />
         ) : null;
+      }
       default:
         return null;
     }
