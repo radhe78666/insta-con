@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { InstagramVideo, InstagramChannel } from '../types';
+import { AIAnalysis } from '../services/aiService';
+import { Loader2, RefreshCcw, AlertCircle } from 'lucide-react';
 
 interface AnalysisProps {
   video: InstagramVideo;
@@ -38,6 +40,16 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
   const [activeTab, setActiveTab] = useState<TabType>('transcript');
   const [copied, setCopied] = useState(false);
 
+  const analysisData: AIAnalysis | null = React.useMemo(() => {
+    if (!video.analysis) return null;
+    try {
+      return JSON.parse(video.analysis);
+    } catch (e) {
+      console.error('Failed to parse analysis data', e);
+      return null;
+    }
+  }, [video.analysis]);
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
@@ -45,10 +57,11 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
   };
 
   const handleCopyTranscript = () => {
-    const transcriptText = "This is a sample transcript for the video content. It contains all the spoken words and key moments...";
-    navigator.clipboard.writeText(transcriptText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (video.transcript) {
+      navigator.clipboard.writeText(video.transcript);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const tabs = [
@@ -183,10 +196,26 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
           {/* Right Column: Analysis Content */}
           <div className="flex flex-col gap-6">
             {/* Summary Section */}
-            <section className="bg-white/[0.02] border border-white/5 rounded-[24px] p-6">
-              <h2 className="text-lg font-bold text-white mb-3">Summary</h2>
+            <section className="bg-white/[0.02] border border-white/5 rounded-[24px] p-6 relative overflow-hidden">
+              {video.status !== 'completed' && (
+                <div className="absolute inset-0 bg-brand-bg/60 backdrop-blur-[2px] z-10 flex items-center justify-center flex-col gap-3">
+                  <Loader2 className="w-8 h-8 text-brand-accent animate-spin" />
+                  <div className="text-center">
+                    <p className="text-white font-bold text-sm">
+                      {video.status === 'transcribing' ? 'Transcribing Video...' : 
+                       video.status === 'analyzing' ? 'Analyzing Content...' : 'Waiting for Process...'}
+                    </p>
+                    <p className="text-zinc-500 text-[10px]">This usually takes 15-30 seconds</p>
+                  </div>
+                </div>
+              )}
+              
+              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                Summary
+                {video.status === 'completed' && <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold uppercase tracking-widest border border-emerald-500/20">AI Generated</span>}
+              </h2>
               <p className="text-zinc-400 leading-relaxed text-base">
-                This video explores how leadership in the electric vehicle industry provides a strategic advantage through hardware expertise, specifically in motors and systems. The speaker argues for the necessity of vertical integration and gigafactory-scale production to remain competitive in the global market. The core message emphasizes that the winner of the AI and robotics race will be determined by who can drive hardware costs down through integrated manufacturing.
+                {analysisData?.summary || "Analysis in progress... We are extracting key themes and summarizing the core message for you."}
               </p>
             </section>
 
@@ -228,41 +257,35 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                           </div>
                           <div>
                             <h3 className="text-base font-bold text-white">Transcript</h3>
-                            <p className="text-[10px] text-zinc-500">288 words analyzed</p>
+                            <p className="text-[10px] text-zinc-500">{video.transcript?.split(' ').length || 0} words analyzed</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-2 cursor-pointer group">
-                            <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 transition-colors">Show sections</span>
-                            <div className="w-3.5 h-3.5 rounded border border-white/20 flex items-center justify-center group-hover:border-brand-accent transition-colors">
-                              <Check className="w-2.5 h-2.5 text-brand-accent" />
-                            </div>
-                          </label>
+                          <button 
+                            onClick={handleCopyTranscript}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold ${
+                              copied ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copied ? 'Copied' : 'Copy'}
+                          </button>
                         </div>
                       </div>
 
                       <div className="space-y-6">
-                        <p className="text-zinc-400 leading-relaxed italic border-l-2 border-brand-accent/30 pl-4 text-sm">
-                          An expert analysis of a geopolitical competitor followed by a breakdown of their industrial advantages and a proposed solution based on vertical integration.
-                        </p>
-
-                        <div className="space-y-5">
-                          {[
-                            { time: '0:00 - 0:04', label: 'THE HOOK', text: 'China can dominate the physical AI future. Can you summarize that for us? It was an important conversation.' },
-                            { time: '0:04 - 0:20', label: 'THE COMPETITOR PROFILE', text: 'So in the geopolitical context, the American competitor, not enemy, but competitor is China. How to understand them as a competitor? They have lots of money. They\'re very, very smart. Their work ethic is equal to or stronger than ours, and they dominate key industries.' },
-                            { time: '0:20 - 0:38', label: 'THE MANUFACTURING ERROR', text: 'The mistake we made was thinking that software was the only thing that mattered. But the physical world is where the real battle is. Robotics, batteries, EVs - this is all hardware.' }
-                          ].map((section, i) => (
-                            <div key={i} className="group">
-                              <div className="flex items-center gap-2 mb-1.5">
-                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{section.label}</span>
-                                <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-white/5 text-zinc-400">{section.time}</span>
-                              </div>
-                              <p className="text-white/90 leading-relaxed text-base font-medium">
-                                {section.text}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                        {video.status === 'completed' || video.transcript ? (
+                          <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5">
+                            <p className="text-white/90 leading-relaxed text-base font-medium whitespace-pre-wrap">
+                              {video.transcript}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-50">
+                            <Loader2 className="w-10 h-10 text-zinc-600 animate-spin" />
+                            <p className="text-zinc-500 text-sm">Transcription in progress...</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -276,20 +299,26 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Idea Analysis</h3>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-6">
-                        {[
-                          { label: 'TOPIC', value: 'China\'s Physical AI Dominance' },
-                          { label: 'IDEA SEED', value: 'How China\'s vertical integration in EVs gives them the edge in robotics' },
-                          { label: 'UNIQUE ANGLE', value: 'Frame a technological race not as a matter of better code, but as a matter of manufacturing scale and industrial vertical integration.' },
-                          { label: 'COMMON BELIEF TO CHALLENGE', value: 'The AI race is primarily a software and algorithm competition won in Silicon Valley.' },
-                          { label: 'CONTRARIAN REALITY', value: 'The AI race is moving into the physical world (robotics), and the winner will be whoever dominates hardware manufacturing and vertical integration.' }
-                        ].map((item, i) => (
-                          <div key={i} className="flex flex-col gap-1.5">
-                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{item.label}</span>
-                            <p className="text-white text-base font-medium leading-relaxed">{item.value}</p>
-                          </div>
-                        ))}
-                      </div>
+                      {analysisData ? (
+                        <div className="grid grid-cols-1 gap-6">
+                          {[
+                            { label: 'TOPIC', value: analysisData.idea_analysis.topic },
+                            { label: 'IDEA SEED', value: analysisData.idea_analysis.idea_seed },
+                            { label: 'UNIQUE ANGLE', value: analysisData.idea_analysis.unique_angle },
+                            { label: 'COMMON BELIEF TO CHALLENGE', value: analysisData.idea_analysis.common_belief_to_challenge },
+                            { label: 'CONTRARIAN REALITY', value: analysisData.idea_analysis.contrarian_reality }
+                          ].map((item, i) => (
+                            <div key={i} className="flex flex-col gap-1.5">
+                              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{item.label}</span>
+                              <p className="text-white text-base font-medium leading-relaxed">{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                          <p className="text-zinc-500 text-sm">Waiting for AI analysis...</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -302,29 +331,32 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Hook Breakdown</h3>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-6">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
-                          <span className="w-fit px-2.5 py-1 rounded-lg bg-white/5 text-zinc-300 text-[10px] font-bold">Case Study</span>
-                        </div>
-                        
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">FORMULA</span>
-                          <p className="text-white text-base font-medium italic">[Entity] can dominate the [Industry] future. Can you summarize that for us?</p>
-                        </div>
+                      {analysisData ? (
+                        <div className="grid grid-cols-1 gap-8">
+                          {analysisData.hooks.map((hook, i) => (
+                            <div key={i} className="grid grid-cols-1 gap-6 p-6 rounded-2xl bg-white/5 border border-white/5">
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">FORMULA</span>
+                                <p className="text-white text-sm font-medium italic">{hook.formula}</p>
+                              </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">TEXT</span>
-                          <p className="text-white text-lg font-bold">"China can dominate the physical AI future. Can you summarize that for us? It was an important conversation."</p>
-                        </div>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">TEXT</span>
+                                <p className="text-white text-lg font-bold">"{hook.text}"</p>
+                              </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ANALYSIS</span>
-                          <p className="text-zinc-400 text-base leading-relaxed">
-                            The spoken hook and text overlay are perfectly aligned, immediately presenting a high-stakes geopolitical threat. To improve your version, use a visual hook that shows the 'physical' element—like footage of a factory or a robot—to immediately ground the abstract concept of AI in something tangible.
-                          </p>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ANALYSIS</span>
+                                <p className="text-zinc-400 text-base leading-relaxed">{hook.analysis}</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                          <p className="text-zinc-500 text-sm">Hook analysis in progress...</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -337,24 +369,28 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Storytelling Format</h3>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-6">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
-                          <span className="w-fit px-2.5 py-1 rounded-lg bg-white/5 text-zinc-300 text-[10px] font-bold">Case Study</span>
-                        </div>
+                      {analysisData ? (
+                        <div className="grid grid-cols-1 gap-6">
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
+                            <span className="w-fit px-2.5 py-1 rounded-lg bg-white/5 text-zinc-300 text-[10px] font-bold">{analysisData.storytelling.category}</span>
+                          </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">DESCRIPTION</span>
-                          <p className="text-white text-base font-medium">Professional interview setting with high-quality audio and a focused focus on an industry expert's analysis.</p>
-                        </div>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">DESCRIPTION</span>
+                            <p className="text-white text-base font-medium">{analysisData.storytelling.description}</p>
+                          </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ANALYSIS</span>
-                          <p className="text-zinc-400 text-base leading-relaxed">
-                            The case study format works well here because it uses China's dominance in the EV market as a proxy to explain the broader competitive threat in AI and robotics. Creators can replicate this by interviewing an expert or reacting to a clip where a specific industry example is used to prove a larger economic theory.
-                          </p>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ANALYSIS</span>
+                            <p className="text-zinc-400 text-base leading-relaxed">{analysisData.storytelling.analysis}</p>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                          <p className="text-zinc-500 text-sm">Storytelling analysis in progress...</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -367,40 +403,41 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Visual Layout</h3>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
-                          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                            <span className="text-white text-sm font-bold">Studio Set</span>
-                          </div>
-                        </div>
+                      {analysisData ? (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
+                              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                                <span className="text-white text-sm font-bold">{analysisData.visual_layout.category}</span>
+                              </div>
+                            </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">SUB-CATEGORY</span>
-                          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                            <span className="text-white text-sm font-bold">Podcast Clips</span>
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">SUB-CATEGORY</span>
+                              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                                <span className="text-white text-sm font-bold">{analysisData.visual_layout.sub_category}</span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      <div className="flex flex-col gap-1.5">
-                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">VISUAL ELEMENTS</span>
-                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {[
-                            'Split screen interview',
-                            'Dynamic text overlays',
-                            'B-roll of manufacturing',
-                            'High-contrast lighting',
-                            'Professional microphone',
-                            'Minimalist background'
-                          ].map((item, i) => (
-                            <li key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/5 text-zinc-300 text-[11px] font-medium">
-                              <div className="w-1 h-1 rounded-full bg-brand-accent" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">VISUAL ELEMENTS</span>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {analysisData.visual_layout.visual_elements.map((item, i) => (
+                                <li key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/5 text-zinc-300 text-[11px] font-medium">
+                                  <div className="w-1 h-1 rounded-full bg-brand-accent" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                          <p className="text-zinc-500 text-sm">Visual analysis in progress...</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </motion.div>

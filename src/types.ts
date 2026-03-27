@@ -39,7 +39,9 @@ export interface InstagramVideo {
   platform: 'Instagram';
   videoUrl: string;
   transcript?: string;
-  analysis?: string;
+  analysis?: string; // We'll store stringified JSON here
+  status?: 'idle' | 'transcribing' | 'analyzing' | 'completed' | 'failed';
+  error?: string;
 }
 
 export interface FilterConfig {

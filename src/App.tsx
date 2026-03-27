@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { User, InstagramVideo, InstagramChannel } from './types';
+import { InstagramVideo, InstagramChannel, User } from './types';
+import { transcribeVideo } from './services/transcriptionService';
+import { analyzeTranscript } from './services/aiService';
 import { MOCK_VIDEOS, MOCK_CHANNELS } from './mockData';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
@@ -91,8 +93,11 @@ export default function App() {
           outlierScore: isNaN(Number(v.outlier_score)) ? 1 : Number(v.outlier_score),
           postedAt: v.posted_at,
           platform: v.platform || 'Instagram',
-          videoUrl: v.video_url || ''
-        })));
+          videoUrl: v.video_url || '',
+          status: v.status || 'completed',
+          transcript: v.transcript || '',
+          analysis: v.analysis || ''
+        } as InstagramVideo)));
       }
     };
     
@@ -157,9 +162,49 @@ export default function App() {
     setUser(null);
   };
 
+  const startAnalysis = async (video: InstagramVideo) => {
+    // Update state to transcribing
+    setSavedVideos(prev => 
+      prev.map(v => v.id === video.id ? { ...v, status: 'transcribing' } : v)
+    );
+
+    try {
+      // 1. Transcription
+      const transResult = await transcribeVideo(video.videoUrl);
+      
+      setSavedVideos(prev => 
+        prev.map(v => v.id === video.id ? { ...v, status: 'analyzing', transcript: transResult.transcript } : v)
+      );
+
+      // 2. AI Analysis
+      const aiResult = await analyzeTranscript(transResult.transcript);
+      const analysisJson = JSON.stringify(aiResult);
+
+      setSavedVideos(prev => 
+        prev.map(v => v.id === video.id ? { ...v, status: 'completed', analysis: analysisJson } : v)
+      );
+
+      // 3. Save to Supabase
+      if (user) {
+        await supabase.from('saved_videos').update({
+          transcript: transResult.transcript,
+          analysis: analysisJson,
+          status: 'completed'
+        }).match({ user_id: user.id, id: video.id });
+      }
+    } catch (error: any) {
+      console.error('Analysis failed:', error);
+      setSavedVideos(prev => 
+        prev.map(v => v.id === video.id ? { ...v, status: 'failed', error: error.message } : v)
+      );
+    }
+  };
+
   const handleAddToLibrary = async (video: InstagramVideo) => {
+    const videoWithStatus: InstagramVideo = { ...video, status: 'idle' };
+    
     setSavedVideos(prev => {
-      if (!prev.find(v => v.id === video.id)) return [...prev, video];
+      if (!prev.find(v => v.id === video.id)) return [...prev, videoWithStatus];
       return prev;
     });
 
@@ -175,9 +220,13 @@ export default function App() {
         outlier_score: video.outlierScore,
         posted_at: video.postedAt,
         platform: video.platform,
-        video_url: video.videoUrl
+        video_url: video.videoUrl,
+        status: 'idle'
       });
     }
+
+    // Start background analysis
+    startAnalysis(videoWithStatus);
   };
 
   const handleRemoveFromLibrary = async (id: string) => {
