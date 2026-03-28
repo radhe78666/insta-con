@@ -745,15 +745,29 @@ const Discovery: React.FC<DiscoveryProps> = ({
                       <span className="text-[10px] font-black text-white">{video.outlierScore}x</span>
                     </div>
 
-                    {/* Play Button Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {/* Play / Progress Button Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px]">
                       {initialView === 'Library' ? (
                         <button 
                           onClick={() => onViewAnalysis?.(video)}
-                          className="px-5 py-2.5 rounded-full bg-brand-accent text-white font-bold text-sm shadow-2xl flex items-center justify-center gap-2 hover:bg-brand-accent/90 transition-all"
+                          className={`px-5 py-2.5 rounded-full font-bold text-sm shadow-2xl flex flex-col items-center justify-center gap-1 transition-all ${
+                            video.status === 'failed' ? 'bg-red-500/90 text-white' : 
+                            video.status === 'transcribing' || video.status === 'analyzing' ? 'bg-orange-500/90 text-white animate-pulse' : 
+                            'bg-brand-accent text-white hover:bg-brand-accent/90'
+                          }`}
                         >
-                          <TrendingUp className="w-4 h-4" />
-                          View Analysis
+                          <div className="flex items-center gap-2">
+                            {video.status === 'failed' ? <Zap className="w-4 h-4 line-through" /> : <TrendingUp className="w-4 h-4" />}
+                            {video.status === 'failed' ? 'Analysis Failed' : 
+                             video.status === 'transcribing' ? 'Transcribing...' : 
+                             video.status === 'analyzing' ? 'Analyzing...' : 
+                             'View Analysis'}
+                          </div>
+                          {video.status === 'failed' && (
+                            <span className="text-[9px] font-normal opacity-90 max-w-[120px] truncate text-center">
+                              {video.error || 'Server error'}
+                            </span>
+                          )}
                         </button>
                       ) : (
                         <button 
