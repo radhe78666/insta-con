@@ -199,13 +199,23 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
             <section className="bg-white/[0.02] border border-white/5 rounded-[24px] p-6 relative overflow-hidden">
               {video.status !== 'completed' && (
                 <div className="absolute inset-0 bg-brand-bg/60 backdrop-blur-[2px] z-10 flex items-center justify-center flex-col gap-3">
-                  <Loader2 className="w-8 h-8 text-brand-accent animate-spin" />
-                  <div className="text-center">
+                  {video.status === 'failed' ? (
+                    <AlertCircle className="w-8 h-8 text-red-400" />
+                  ) : (
+                    <Loader2 className="w-8 h-8 text-brand-accent animate-spin" />
+                  )}
+                  <div className="text-center px-4">
                     <p className="text-white font-bold text-sm">
                       {video.status === 'transcribing' ? 'Transcribing Video...' : 
-                       video.status === 'analyzing' ? 'Analyzing Content...' : 'Waiting for Process...'}
+                       video.status === 'analyzing' ? 'Analyzing Content...' : 
+                       video.status === 'failed' ? 'Analysis Failed' : 
+                       'Waiting for Process...'}
                     </p>
-                    <p className="text-zinc-500 text-[10px]">This usually takes 15-30 seconds</p>
+                    {video.status === 'failed' ? (
+                      <p className="text-red-400/80 text-[10px] mt-1">{video.error || 'Server error occurred'}</p>
+                    ) : (
+                      <p className="text-zinc-500 text-[10px]">This usually takes 15-30 seconds</p>
+                    )}
                   </div>
                 </div>
               )}
