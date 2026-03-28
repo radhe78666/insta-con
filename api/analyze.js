@@ -71,10 +71,10 @@ ${transcript}`;
   // Use direct REST API instead of SDK to avoid v1beta endpoint issues
   // Try newer models first (v1 endpoint), then fall back to older models (v1beta)
   const modelsToTry = [
-    { model: 'gemini-2.0-flash', apiVersion: 'v1' },
-    { model: 'gemini-2.0-flash-001', apiVersion: 'v1' },
+    { model: 'gemini-2.0-flash', apiVersion: 'v1beta' },
+    { model: 'gemini-2.0-flash-lite', apiVersion: 'v1beta' },
+    { model: 'gemini-2.0-flash-001', apiVersion: 'v1beta' },
     { model: 'gemini-1.5-flash', apiVersion: 'v1beta' },
-    { model: 'gemini-1.5-flash-latest', apiVersion: 'v1beta' },
   ];
 
   let lastError = null;
