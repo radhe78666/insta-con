@@ -369,7 +369,7 @@ export default function App() {
             onOpenConfigure={() => setIsConfigureModalOpen(true)}
             onViewAnalysis={(video) => {
               setSelectedVideoForAnalysis(video);
-              setActiveTab('analysis');
+              handleTabChange('analysis');
             }}
             selectedVideoDetails={selectedVideoDetails}
             setSelectedVideoDetails={setSelectedVideoDetails}
