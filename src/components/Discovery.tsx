@@ -192,14 +192,31 @@ const Discovery: React.FC<DiscoveryProps> = ({
       }
     }
 
-    // Apply filters (Restoring filter logic)
+    // Apply all filters
     if (filters.channels.length > 0) {
       videos = videos.filter(v => filters.channels.includes(v.channelId));
     }
     if (filters.platform !== 'All') {
       videos = videos.filter(v => v.platform === filters.platform);
     }
-    // Add other filter logic if needed...
+    // Views filter
+    videos = videos.filter(v => v.views >= filters.views[0] && v.views <= filters.views[1]);
+    // Outlier score filter
+    videos = videos.filter(v => v.outlierScore >= filters.outlierScore[0] && v.outlierScore <= filters.outlierScore[1]);
+    // Engagement filter (0-100 scale)
+    videos = videos.filter(v => (v.engagement * 100) >= filters.engagement[0] && (v.engagement * 100) <= filters.engagement[1]);
+    // Posted in last filter
+    if (filters.postedInLast > 0) {
+      const now = new Date();
+      const unitMs: Record<string, number> = { Days: 86400000, Weeks: 604800000, Months: 2592000000, Years: 31536000000 };
+      const cutoff = new Date(now.getTime() - filters.postedInLast * (unitMs[filters.postedInLastUnit] || 2592000000));
+      videos = videos.filter(v => new Date(v.postedAt) >= cutoff);
+    }
+    // Keywords filter
+    if (filters.keywords) {
+      const kw = filters.keywords.toLowerCase();
+      videos = videos.filter(v => v.caption?.toLowerCase().includes(kw));
+    }
 
     // Sort
     return [...videos].sort((a, b) => {
@@ -426,8 +443,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-zinc-400">Outlier score</label>
                 <div className="flex gap-2">
-                  <input type="number" placeholder="1" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
-                  <input type="number" placeholder="100x" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="1" value={filters.outlierScore[0]} onChange={e => setFilters(f => ({ ...f, outlierScore: [Number(e.target.value), f.outlierScore[1]] }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="100x" value={filters.outlierScore[1]} onChange={e => setFilters(f => ({ ...f, outlierScore: [f.outlierScore[0], Number(e.target.value)] }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
                 </div>
               </div>
 
@@ -435,8 +452,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-zinc-400">Views</label>
                 <div className="flex gap-2">
-                  <input type="number" placeholder="0" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
-                  <input type="number" placeholder="10,000,000" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="0" value={filters.views[0]} onChange={e => setFilters(f => ({ ...f, views: [Number(e.target.value), f.views[1]] }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="10,000,000" value={filters.views[1]} onChange={e => setFilters(f => ({ ...f, views: [f.views[0], Number(e.target.value)] }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
                 </div>
               </div>
 
@@ -444,8 +461,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-zinc-400">Engagement</label>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="0%" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
-                  <input type="text" placeholder="100%" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="0%" value={filters.engagement[0]} onChange={e => setFilters(f => ({ ...f, engagement: [Number(e.target.value), f.engagement[1]] }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="100%" value={filters.engagement[1]} onChange={e => setFilters(f => ({ ...f, engagement: [f.engagement[0], Number(e.target.value)] }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
                 </div>
               </div>
 
@@ -453,12 +470,13 @@ const Discovery: React.FC<DiscoveryProps> = ({
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-zinc-400">Posted in last</label>
                 <div className="flex gap-2">
-                  <input type="number" placeholder="0" className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
+                  <input type="number" placeholder="0" value={filters.postedInLast} onChange={e => setFilters(f => ({ ...f, postedInLast: Number(e.target.value) }))} className="w-1/2 bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/50" />
                   <div className="relative w-1/2">
-                    <select className="w-full bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white appearance-none focus:outline-none focus:border-brand-accent/50">
+                    <select value={filters.postedInLastUnit} onChange={e => setFilters(f => ({ ...f, postedInLastUnit: e.target.value as any }))} className="w-full bg-brand-bg/50 border border-brand-border rounded-lg px-3 py-2 text-sm text-white appearance-none focus:outline-none focus:border-brand-accent/50">
                       <option>Months</option>
                       <option>Weeks</option>
                       <option>Days</option>
+                      <option>Years</option>
                     </select>
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
                   </div>
