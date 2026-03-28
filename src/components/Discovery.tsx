@@ -138,16 +138,17 @@ const Discovery: React.FC<DiscoveryProps> = ({
 
   const categories = ['Trending', 'For You', 'Music', 'Sports', 'Entertainment', 'Tech', 'Gaming'];
 
-  const [filters, setFilters] = useState<FilterConfig>({
+  const DEFAULT_FILTERS: FilterConfig = {
     channels: [],
-    outlierScore: [1, 100],
-    views: [0, 10000000],
+    outlierScore: [1, 1000],
+    views: [0, 1000000000],
     engagement: [0, 100],
     postedInLast: 0,
     postedInLastUnit: 'Months',
     platform: 'All',
     keywords: ''
-  });
+  };
+  const [filters, setFilters] = useState<FilterConfig>(DEFAULT_FILTERS);
 
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'views' | 'outlier' | 'engagement'>('newest');
 
@@ -348,16 +349,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
               <div className="flex items-center justify-between">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Filters</h2>
                 <button 
-                  onClick={() => setFilters({
-                    channels: [],
-                    outlierScore: [1, 100],
-                    views: [0, 10000000],
-                    engagement: [0, 100],
-                    postedInLast: 0,
-                    postedInLastUnit: 'Months',
-                    platform: 'All',
-                    keywords: ''
-                  })}
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
                   className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
                 >
                   Clear
