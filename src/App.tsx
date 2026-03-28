@@ -96,7 +96,8 @@ export default function App() {
           videoUrl: v.video_url || '',
           status: v.status || 'completed',
           transcript: v.transcript || '',
-          analysis: v.analysis || ''
+          analysis: v.analysis || '',
+          error: v.error || ''
         } as InstagramVideo)));
       }
     };
