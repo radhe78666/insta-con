@@ -299,14 +299,14 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Idea Analysis</h3>
                       </div>
 
-                      {analysisData ? (
+                      {analysisData?.idea_analysis ? (
                         <div className="grid grid-cols-1 gap-6">
                           {[
-                            { label: 'TOPIC', value: analysisData.idea_analysis.topic },
-                            { label: 'IDEA SEED', value: analysisData.idea_analysis.idea_seed },
-                            { label: 'UNIQUE ANGLE', value: analysisData.idea_analysis.unique_angle },
-                            { label: 'COMMON BELIEF TO CHALLENGE', value: analysisData.idea_analysis.common_belief_to_challenge },
-                            { label: 'CONTRARIAN REALITY', value: analysisData.idea_analysis.contrarian_reality }
+                            { label: 'TOPIC', value: analysisData.idea_analysis?.topic || 'N/A' },
+                            { label: 'IDEA SEED', value: analysisData.idea_analysis?.idea_seed || 'N/A' },
+                            { label: 'UNIQUE ANGLE', value: analysisData.idea_analysis?.unique_angle || 'N/A' },
+                            { label: 'COMMON BELIEF TO CHALLENGE', value: analysisData.idea_analysis?.common_belief_to_challenge || 'N/A' },
+                            { label: 'CONTRARIAN REALITY', value: analysisData.idea_analysis?.contrarian_reality || 'N/A' }
                           ].map((item, i) => (
                             <div key={i} className="flex flex-col gap-1.5">
                               <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{item.label}</span>
@@ -331,23 +331,23 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Hook Breakdown</h3>
                       </div>
 
-                      {analysisData ? (
+                      {analysisData?.hooks && Array.isArray(analysisData.hooks) ? (
                         <div className="grid grid-cols-1 gap-8">
                           {analysisData.hooks.map((hook, i) => (
                             <div key={i} className="grid grid-cols-1 gap-6 p-6 rounded-2xl bg-white/5 border border-white/5">
                               <div className="flex flex-col gap-1.5">
                                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">FORMULA</span>
-                                <p className="text-white text-sm font-medium italic">{hook.formula}</p>
+                                <p className="text-white text-sm font-medium italic">{hook?.formula || 'N/A'}</p>
                               </div>
 
                               <div className="flex flex-col gap-1.5">
                                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">TEXT</span>
-                                <p className="text-white text-lg font-bold">"{hook.text}"</p>
+                                <p className="text-white text-lg font-bold">"{hook?.text || 'N/A'}"</p>
                               </div>
 
                               <div className="flex flex-col gap-1.5">
                                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ANALYSIS</span>
-                                <p className="text-zinc-400 text-base leading-relaxed">{hook.analysis}</p>
+                                <p className="text-zinc-400 text-base leading-relaxed">{hook?.analysis || 'N/A'}</p>
                               </div>
                             </div>
                           ))}
@@ -369,21 +369,21 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Storytelling Format</h3>
                       </div>
 
-                      {analysisData ? (
+                      {analysisData?.storytelling ? (
                         <div className="grid grid-cols-1 gap-6">
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
-                            <span className="w-fit px-2.5 py-1 rounded-lg bg-white/5 text-zinc-300 text-[10px] font-bold">{analysisData.storytelling.category}</span>
+                            <span className="w-fit px-2.5 py-1 rounded-lg bg-white/5 text-zinc-300 text-[10px] font-bold">{analysisData.storytelling?.category || 'N/A'}</span>
                           </div>
 
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">DESCRIPTION</span>
-                            <p className="text-white text-base font-medium">{analysisData.storytelling.description}</p>
+                            <p className="text-white text-base font-medium">{analysisData.storytelling?.description || 'N/A'}</p>
                           </div>
 
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ANALYSIS</span>
-                            <p className="text-zinc-400 text-base leading-relaxed">{analysisData.storytelling.analysis}</p>
+                            <p className="text-zinc-400 text-base leading-relaxed">{analysisData.storytelling?.analysis || 'N/A'}</p>
                           </div>
                         </div>
                       ) : (
@@ -403,20 +403,20 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                         <h3 className="text-base font-bold text-white">Visual Layout</h3>
                       </div>
 
-                      {analysisData ? (
+                      {analysisData?.visual_layout ? (
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex flex-col gap-1.5">
                               <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">CATEGORY</span>
                               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                                <span className="text-white text-sm font-bold">{analysisData.visual_layout.category}</span>
+                                <span className="text-white text-sm font-bold">{analysisData.visual_layout?.category || 'N/A'}</span>
                               </div>
                             </div>
 
                             <div className="flex flex-col gap-1.5">
                               <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">SUB-CATEGORY</span>
                               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                                <span className="text-white text-sm font-bold">{analysisData.visual_layout.sub_category}</span>
+                                <span className="text-white text-sm font-bold">{analysisData.visual_layout?.sub_category || 'N/A'}</span>
                               </div>
                             </div>
                           </div>
@@ -424,7 +424,7 @@ const Analysis: React.FC<AnalysisProps> = ({ video, channel, onBack, onViewDetai
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">VISUAL ELEMENTS</span>
                             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {analysisData.visual_layout.visual_elements.map((item, i) => (
+                              {(analysisData.visual_layout?.visual_elements || []).map((item: string, i: number) => (
                                 <li key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/5 text-zinc-300 text-[11px] font-medium">
                                   <div className="w-1 h-1 rounded-full bg-brand-accent" />
                                   {item}
