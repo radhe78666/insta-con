@@ -197,6 +197,12 @@ export default function App() {
       setSavedVideos(prev => 
         prev.map(v => v.id === video.id ? { ...v, status: 'failed', error: error.message } : v)
       );
+      if (user) {
+        await supabase.from('saved_videos').update({
+          status: 'failed',
+          error: error.message
+        }).match({ user_id: user.id, id: video.id });
+      }
     }
   };
 
