@@ -73,8 +73,8 @@ export default async function handler(req, res) {
     "${transcript.replace(/"/g, '\\"')}"
     `;
 
-    // Try multiple models to ensure compatibility with all types of Gemini API Keys
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-latest", "gemini-pro"];
+    // Try multiple models - newer keys support Gemini 2.x models
+    const modelsToTry = ["gemini-2.0-flash", "gemini-2.5-pro-preview-03-25", "gemini-1.5-flash", "gemini-1.5-flash-latest"];
     let result = null;
     let lastError = null;
 
