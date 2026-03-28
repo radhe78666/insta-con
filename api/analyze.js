@@ -38,8 +38,6 @@ export default async function handler(req, res) {
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `
     Analyze the following video transcript and extract the key elements. You MUST MUST MUST respond with a valid JSON block, and absolutely NOTHING ELSE. Do not include markdown formatting or backticks around the json. The output must strictly follow this JSON structure in English:
     
@@ -75,7 +73,28 @@ export default async function handler(req, res) {
     "${transcript.replace(/"/g, '\\"')}"
     `;
 
-    const result = await model.generateContent(prompt);
+    // Try multiple models to ensure compatibility with all types of Gemini API Keys
+    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-latest", "gemini-pro"];
+    let result = null;
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`Trying model: ${modelName}`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        result = await model.generateContent(prompt);
+        break; // Success
+      } catch (err) {
+        console.warn(`Model ${modelName} failed. trying next...`);
+        lastError = err;
+      }
+    }
+
+    if (!result) {
+      console.error('All Gemini models failed:', lastError);
+      return res.status(500).json({ error: lastError?.message || 'Failed to analyze content with all available AI models' });
+    }
+
     const text = result.response.text();
 
     const cleanJsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
