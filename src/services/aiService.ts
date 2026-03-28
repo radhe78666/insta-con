@@ -1,23 +1,28 @@
 import { supabase } from '../lib/supabase';
 
 export interface AIAnalysis {
-  hook: {
+  summary: string;
+  hooks: {
     formula: string;
-    explanation: string;
     text: string;
-  };
-  idea: {
+    analysis: string;
+  }[];
+  idea_analysis: {
     topic: string;
-    seeds: string[];
-    summary: string;
+    idea_seed: string;
+    unique_angle: string;
+    common_belief_to_challenge: string;
+    contrarian_reality: string;
   };
   storytelling: {
     category: string;
+    description: string;
     analysis: string;
   };
-  layout: {
-    scene: string;
-    visuals: string[];
+  visual_layout: {
+    category: string;
+    sub_category: string;
+    visual_elements: string[];
   };
 }
 
