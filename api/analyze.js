@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
@@ -27,7 +26,7 @@ export default async function handler(req, res) {
 
   if (!GEMINI_API_KEY) {
     console.error('Missing GEMINI_API_KEY in environment variables');
-    return res.status(500).json({ error: 'Gemini Configuration Error' });
+    return res.status(500).json({ error: 'Gemini Configuration Error: No API key found' });
   }
 
   const { transcript } = req.body;
@@ -36,73 +35,92 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing transcript parameter' });
   }
 
-  try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const prompt = `
-    Analyze the following video transcript and extract the key elements. You MUST MUST MUST respond with a valid JSON block, and absolutely NOTHING ELSE. Do not include markdown formatting or backticks around the json. The output must strictly follow this JSON structure in English:
+  const prompt = `Analyze the following video transcript and extract the key elements. You MUST respond with a valid JSON block, and absolutely NOTHING ELSE. Do not include markdown formatting or backticks around the json. The output must strictly follow this JSON structure in English:
     
+{
+  "summary": "Full summary of the video content",
+  "hooks": [
     {
-      "summary": "Full summary of the video content",
-      "hooks": [
-        {
-          "formula": "The pattern used (e.g. Question + Benefit)",
-          "text": "The actual hook used",
-          "analysis": "Why it works"
-        }
-      ],
-      "idea_analysis": {
-        "topic": "Main subject",
-        "idea_seed": "The core idea",
-        "unique_angle": "What makes it different",
-        "common_belief_to_challenge": "What people usually think",
-        "contrarian_reality": "The truth exposed in the video"
-      },
-      "storytelling": {
-        "category": "e.g. Case Study, Personal Story, Tutorial",
-        "description": "How the story is told",
-        "analysis": "Effectiveness of this style"
-      },
-      "visual_layout": {
-        "category": "e.g. Studio, Outdoor, Screen Share",
-        "sub_category": "e.g. Podcast, Vlog, Documentary",
-        "visual_elements": ["List of key visual components"]
-      }
+      "formula": "The pattern used (e.g. Question + Benefit)",
+      "text": "The actual hook used",
+      "analysis": "Why it works"
     }
-    
-    TRANSCRIPT:
-    "${transcript.replace(/"/g, '\\"')}"
-    `;
-
-    // Try multiple models - newer keys support Gemini 2.x models
-    const modelsToTry = ["gemini-2.0-flash", "gemini-2.5-pro-preview-03-25", "gemini-1.5-flash", "gemini-1.5-flash-latest"];
-    let result = null;
-    let lastError = null;
-
-    for (const modelName of modelsToTry) {
-      try {
-        console.log(`Trying model: ${modelName}`);
-        const model = genAI.getGenerativeModel({ model: modelName });
-        result = await model.generateContent(prompt);
-        break; // Success
-      } catch (err) {
-        console.warn(`Model ${modelName} failed. trying next...`);
-        lastError = err;
-      }
-    }
-
-    if (!result) {
-      console.error('All Gemini models failed:', lastError);
-      return res.status(500).json({ error: lastError?.message || 'Failed to analyze content with all available AI models' });
-    }
-
-    const text = result.response.text();
-
-    const cleanJsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const jsonResult = JSON.parse(cleanJsonString);
-
-    return res.status(200).json(jsonResult);
-  } catch (error) {
-    console.error('Gemini Analysis Error:', error);
-    return res.status(500).json({ error: 'Failed to analyze transcript' });
+  ],
+  "idea_analysis": {
+    "topic": "Main subject",
+    "idea_seed": "The core idea",
+    "unique_angle": "What makes it different",
+    "common_belief_to_challenge": "What people usually think",
+    "contrarian_reality": "The truth exposed in the video"
+  },
+  "storytelling": {
+    "category": "e.g. Case Study, Personal Story, Tutorial",
+    "description": "How the story is told",
+    "analysis": "Effectiveness of this style"
+  },
+  "visual_layout": {
+    "category": "e.g. Studio, Outdoor, Screen Share",
+    "sub_category": "e.g. Podcast, Vlog, Documentary",
+    "visual_elements": ["List of key visual components"]
   }
+}
+
+TRANSCRIPT:
+${transcript}`;
+
+  // Use direct REST API instead of SDK to avoid v1beta endpoint issues
+  // Try newer models first (v1 endpoint), then fall back to older models (v1beta)
+  const modelsToTry = [
+    { model: 'gemini-2.0-flash', apiVersion: 'v1' },
+    { model: 'gemini-2.0-flash-001', apiVersion: 'v1' },
+    { model: 'gemini-1.5-flash', apiVersion: 'v1beta' },
+    { model: 'gemini-1.5-flash-latest', apiVersion: 'v1beta' },
+  ];
+
+  let lastError = null;
+
+  for (const { model, apiVersion } of modelsToTry) {
+    try {
+      console.log(`Trying model: ${model} (${apiVersion})`);
+      
+      const apiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`Model ${model} failed with ${response.status}:`, errText.substring(0, 100));
+        lastError = new Error(`${model}: ${response.status} ${response.statusText}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!text) {
+        console.warn(`Model ${model} returned empty response`);
+        lastError = new Error(`${model}: empty response`);
+        continue;
+      }
+
+      console.log(`Success with model: ${model}`);
+      const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const jsonResult = JSON.parse(cleanJson);
+      return res.status(200).json(jsonResult);
+
+    } catch (err) {
+      console.warn(`Model ${model} threw error:`, err.message);
+      lastError = err;
+    }
+  }
+
+  console.error('All Gemini models failed. Last error:', lastError?.message);
+  return res.status(500).json({ error: lastError?.message || 'All AI models failed' });
 }
