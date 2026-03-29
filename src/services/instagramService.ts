@@ -93,7 +93,7 @@ export const fetchInstagramPostByUrl = async (url: string): Promise<InstagramVid
   if (!shortcode) throw new Error('Invalid Instagram URL. Use a post or reel link.');
 
   try {
-    const data = await fetchRapidApi('media', { shortcode });
+    const data = await fetchRapidApi('mediaByShortcode', { shortcode });
     const r = data?.result || data?.data || data;
     if (!r || !r.id) throw new Error('Post not found or is private.');
 
