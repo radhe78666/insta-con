@@ -31,9 +31,9 @@ export const fetchInstagramPostsPage = async (channelUrl: string, cursor: string
     let cleanUsername = channelUrl.trim();
     if (cleanUsername.includes('instagram.com/')) {
       const parts = cleanUsername.split('instagram.com/');
-      cleanUsername = parts[1].split('/')[0];
+      cleanUsername = parts[1].split('/')[0].split('?')[0].split('#')[0]; // strip ?igsh= and #hash
     } else {
-      cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
+      cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '').split('?')[0];
     }
 
     const data = await fetchRapidApi('posts', { username: cleanUsername, maxId: cursor });
@@ -85,9 +85,9 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
     let cleanUsername = query.trim();
     if (cleanUsername.includes('instagram.com/')) {
       const parts = cleanUsername.split('instagram.com/');
-      cleanUsername = parts[1].split('/')[0];
+      cleanUsername = parts[1].split('/')[0].split('?')[0].split('#')[0]; // strip ?igsh= and #hash
     } else {
-      cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '');
+      cleanUsername = cleanUsername.replace('@', '').toLowerCase().replace(/\s+/g, '').split('?')[0];
     }
 
     const data = await fetchRapidApi('profile', { username: cleanUsername });
