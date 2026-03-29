@@ -80,6 +80,53 @@ export const fetchInstagramPostsPage = async (channelUrl: string, cursor: string
   }
 };
 
+// Extract shortcode from any Instagram post/reel URL
+export const extractInstagramShortcode = (url: string): string | null => {
+  const cleaned = url.trim().split('?')[0].split('#')[0].replace(/\/$/, '');
+  const match = cleaned.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  return match ? match[1] : null;
+};
+
+// Fetch a single Instagram post by URL and return as InstagramVideo
+export const fetchInstagramPostByUrl = async (url: string): Promise<InstagramVideo | null> => {
+  const shortcode = extractInstagramShortcode(url);
+  if (!shortcode) throw new Error('Invalid Instagram URL. Use a post or reel link.');
+
+  try {
+    const data = await fetchRapidApi('media', { shortcode });
+    const r = data?.result || data?.data || data;
+    if (!r || !r.id) throw new Error('Post not found or is private.');
+
+    const videoUrl = r.video_versions?.[0]?.url || r.video_url || '';
+    const thumbnailUrl = r.image_versions2?.candidates?.[0]?.url || r.thumbnail_url || r.display_url || '';
+    const views = r.play_count || r.view_count || r.video_view_count || 0;
+    const likes = r.like_count || 0;
+    const comments = r.comment_count || 0;
+    const engagement = views > 0 ? parseFloat(((likes + comments) / views).toFixed(4)) : 0;
+
+    if (!videoUrl) throw new Error('This post has no video or is a photo post.');
+
+    return {
+      id: `url-${shortcode}-${Date.now()}`,
+      channelId: r.user?.username || r.owner?.username || 'unknown',
+      thumbnailUrl,
+      caption: r.caption?.text || r.edge_media_to_caption?.edges?.[0]?.node?.text || '',
+      views,
+      engagement,
+      outlierScore: 1,
+      postedAt: r.taken_at ? new Date(r.taken_at * 1000).toISOString() : new Date().toISOString(),
+      platform: 'Instagram',
+      videoUrl,
+      status: 'idle',
+      transcript: '',
+      analysis: '',
+    } as InstagramVideo;
+  } catch (error: any) {
+    console.error('Error fetching post by URL:', error);
+    throw error;
+  }
+};
+
 export const searchInstagramProfile = async (query: string): Promise<InstagramChannel[]> => {
   try {
     let cleanUsername = query.trim();

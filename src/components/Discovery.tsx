@@ -23,7 +23,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { InstagramVideo, InstagramChannel, FilterConfig } from '../types';
 import { MOCK_VIDEOS } from '../mockData';
-import { fetchInstagramPostsPage, fetchDiscoveryVideos } from '../services/instagramService';
+import { fetchInstagramPostsPage, fetchDiscoveryVideos, fetchInstagramPostByUrl } from '../services/instagramService';
 
 interface FlyingVideo {
   id: string;
@@ -86,6 +86,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
   const [showDevNotice, setShowDevNotice] = useState(initialView === 'Videos');
   const libraryButtonRef = useRef<HTMLButtonElement>(null);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [fetchUrlError, setFetchUrlError] = useState('');
 
   React.useEffect(() => {
     // Skip if Library or if we already have cached videos
@@ -229,15 +231,17 @@ const Discovery: React.FC<DiscoveryProps> = ({
     });
   }, [initialView, savedVideos, apiVideos, searchQuery, sortBy, filters, trackedChannels]);
 
-  const handleAddVideo = () => {
-    if (videoUrl.trim()) {
-      // Simulate finding a video
-      const randomVideo = MOCK_VIDEOS[Math.floor(Math.random() * MOCK_VIDEOS.length)];
-      setPreviewVideo({
-        ...randomVideo,
-        id: `custom-${Date.now()}`,
-        caption: "Newly added video from URL"
-      });
+  const handleAddVideo = async () => {
+    if (!videoUrl.trim()) return;
+    setFetchUrlError('');
+    setIsFetchingUrl(true);
+    try {
+      const video = await fetchInstagramPostByUrl(videoUrl.trim());
+      if (video) setPreviewVideo(video);
+    } catch (err: any) {
+      setFetchUrlError(err.message || 'Could not fetch this video. Make sure it is a public Instagram post/reel.');
+    } finally {
+      setIsFetchingUrl(false);
     }
   };
 
@@ -934,22 +938,29 @@ const Discovery: React.FC<DiscoveryProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <label className="text-sm font-bold text-zinc-400">Video Link</label>
+                  <label className="text-sm font-bold text-zinc-400">Instagram Reel or Post Link</label>
                   <div className="flex gap-2">
                     <input 
                       type="text" 
-                      placeholder="Paste Instagram or TikTok link here"
+                      placeholder="Paste Instagram reel/post link here"
                       value={videoUrl}
-                      onChange={(e) => setVideoUrl(e.target.value)}
+                      onChange={(e) => { setVideoUrl(e.target.value); setFetchUrlError(''); setPreviewVideo(null); }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddVideo()}
                       className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-accent/50 transition-all"
                     />
                     <button 
                       onClick={handleAddVideo}
-                      className="px-6 py-3 bg-brand-accent text-white font-bold rounded-xl hover:bg-brand-accent/90 transition-all"
+                      disabled={isFetchingUrl || !videoUrl.trim()}
+                      className="px-6 py-3 bg-brand-accent text-white font-bold rounded-xl hover:bg-brand-accent/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      Preview
+                      {isFetchingUrl ? (
+                        <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>Fetching...</span></>
+                      ) : 'Fetch'}
                     </button>
                   </div>
+                  {fetchUrlError && (
+                    <p className="text-red-400 text-xs mt-1">{fetchUrlError}</p>
+                  )}
                 </div>
 
                 {previewVideo && (
