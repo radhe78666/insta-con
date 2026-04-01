@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { InstagramVideo, InstagramChannel, FilterConfig } from '../types';
 import { MOCK_VIDEOS } from '../mockData';
 import { fetchInstagramPostsPage, fetchDiscoveryVideos, fetchInstagramPostByUrl } from '../services/instagramService';
+import { getCachedVideosForChannels, SyncProgress } from '../services/channelSyncService';
 
 interface FlyingVideo {
   id: string;
@@ -52,6 +53,7 @@ interface DiscoveryProps {
   setIsLoadingVideos: (isLoading: boolean) => void;
   channelCursors?: Record<string, string>;
   setChannelCursors?: (cursors: Record<string, string>) => void;
+  syncProgress?: Record<string, SyncProgress>;
 }
 
 const Discovery: React.FC<DiscoveryProps> = ({ 
@@ -72,7 +74,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
   isLoadingVideos,
   setIsLoadingVideos,
   channelCursors,
-  setChannelCursors
+  setChannelCursors,
+  syncProgress
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Trending');
@@ -108,35 +111,93 @@ const Discovery: React.FC<DiscoveryProps> = ({
       return;
     }
 
+    // Check if any channel is still syncing
+    const anySyncing = trackedChannels.some(ch => {
+      const progress = syncProgress?.[ch.username];
+      return progress && progress.status === 'syncing';
+    });
+
+    // Load from Supabase cache
     setIsLoadingVideos(true);
     
-    const fetchInitialVideos = async () => {
-      const newCursors: Record<string, string> = {};
-      let allVideos: InstagramVideo[] = [];
-
+    const loadCachedVideos = async () => {
       try {
-        const promises = trackedChannels.map(async (channel) => {
-          const result = await fetchInstagramPostsPage(`https://www.instagram.com/${channel.username}/`, '');
-          newCursors[channel.username] = result.nextCursor || '';
-          return result.videos;
-        });
+        const usernames = trackedChannels.map(ch => ch.username);
+        const cachedData = await getCachedVideosForChannels(usernames);
+        
+        // Convert cached data to InstagramVideo format
+        const formattedVideos: InstagramVideo[] = cachedData.map((v: any) => ({
+          id: v.id,
+          channelId: v.username,
+          shortcode: v.shortcode,
+          thumbnailUrl: v.thumbnail_url ? `/api/image-proxy?url=${encodeURIComponent(v.thumbnail_url)}` : '',
+          caption: v.caption || '',
+          views: v.view_count || 0,
+          engagement: v.view_count > 0 ? ((v.like_count || 0) / v.view_count) : 0,
+          outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
+          postedAt: v.posted_at || new Date().toISOString(),
+          platform: 'Instagram' as const,
+          videoUrl: v.video_url || '',
+          likeCount: v.like_count || 0,
+          commentCount: v.comment_count || 0,
+        }));
 
-        const results = await Promise.all(promises);
-        allVideos = results.flat();
-
-        if (setChannelCursors) {
-          setChannelCursors(newCursors);
-        }
-        setApiVideos(allVideos.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
+        setApiVideos(formattedVideos.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
       } catch (err) {
-        console.error('Error fetching initial videos:', err);
+        console.error('Error loading cached videos:', err);
       } finally {
-        setIsLoadingVideos(false);
+        if (!anySyncing) {
+          setIsLoadingVideos(false);
+        }
       }
     };
 
-    fetchInitialVideos();
+    loadCachedVideos();
   }, [trackedChannels, initialView, apiVideos.length]);
+
+  // Reload videos when sync completes
+  React.useEffect(() => {
+    if (initialView === 'Library' || initialView === 'Videos') return;
+    if (!syncProgress || Object.keys(syncProgress).length === 0) return;
+
+    const allCompleted = trackedChannels.every(ch => {
+      const progress = syncProgress[ch.username];
+      return !progress || progress.status === 'completed';
+    });
+
+    if (allCompleted && trackedChannels.length > 0) {
+      // Refresh from cache when all syncs complete
+      const loadFresh = async () => {
+        try {
+          const usernames = trackedChannels.map(ch => ch.username);
+          const cachedData = await getCachedVideosForChannels(usernames);
+          
+          const formattedVideos: InstagramVideo[] = cachedData.map((v: any) => ({
+            id: v.id,
+            channelId: v.username,
+            shortcode: v.shortcode,
+            thumbnailUrl: v.thumbnail_url ? `/api/image-proxy?url=${encodeURIComponent(v.thumbnail_url)}` : '',
+            caption: v.caption || '',
+            views: v.view_count || 0,
+            engagement: v.view_count > 0 ? ((v.like_count || 0) / v.view_count) : 0,
+            outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
+            postedAt: v.posted_at || new Date().toISOString(),
+            platform: 'Instagram' as const,
+            videoUrl: v.video_url || '',
+            likeCount: v.like_count || 0,
+            commentCount: v.comment_count || 0,
+          }));
+
+          setApiVideos(formattedVideos.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
+        } catch (err) {
+          console.error('Error refreshing cached videos:', err);
+        } finally {
+          setIsLoadingVideos(false);
+        }
+      };
+      loadFresh();
+    }
+  }, [syncProgress]);
 
   const categories = ['Trending', 'For You', 'Music', 'Sports', 'Entertainment', 'Tech', 'Gaming'];
 
@@ -690,10 +751,37 @@ const Discovery: React.FC<DiscoveryProps> = ({
             {isLoadingVideos ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-zinc-400 font-bold">Fetching real-time videos instantly...</p>
-                <p className="text-zinc-600 text-xs mt-2">
-                  {initialView === 'Videos' ? 'Discovering top recommended content for you...' : 'Syncing channels directly from Instagram DB'}
-                </p>
+                {syncProgress && trackedChannels.some(ch => syncProgress[ch.username]?.status === 'syncing') ? (
+                  <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+                    <p className="text-zinc-300 font-bold text-lg">Syncing Channel Videos...</p>
+                    {trackedChannels.filter(ch => syncProgress[ch.username]?.status === 'syncing').map(ch => {
+                      const progress = syncProgress[ch.username];
+                      const pct = Math.round((progress.fetched / progress.target) * 100);
+                      return (
+                        <div key={ch.username} className="w-full">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-zinc-400">@{ch.username}</span>
+                            <span className="text-sm text-brand-accent font-bold">{progress.fetched}/{progress.target}</span>
+                          </div>
+                          <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-brand-accent to-orange-400 rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <p className="text-zinc-600 text-xs mt-2">Sort &amp; filter will be available after sync completes</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-zinc-400 font-bold">Loading cached videos...</p>
+                    <p className="text-zinc-600 text-xs mt-2">
+                      {initialView === 'Videos' ? 'Discovering top recommended content for you...' : 'Loading from database...'}
+                    </p>
+                  </>
+                )}
               </div>
             ) : initialView === 'Videos' && filteredVideos.length === 0 ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">

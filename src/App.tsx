@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { InstagramVideo, InstagramChannel, User } from './types';
 import { transcribeVideo } from './services/transcriptionService';
 import { analyzeContent } from './services/aiService';
+import { fetchFreshVideoUrl } from './services/instagramService';
+import { syncChannelVideos, SyncProgress, getChannelSyncStatus } from './services/channelSyncService';
 import { MOCK_VIDEOS, MOCK_CHANNELS } from './mockData';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
@@ -45,6 +47,7 @@ export default function App() {
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
   const [channelCursors, setChannelCursors] = useState<Record<string, string>>({});
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['dashboard']));
+  const [syncProgress, setSyncProgress] = useState<Record<string, SyncProgress>>({});
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -170,8 +173,19 @@ export default function App() {
     );
 
     try {
+      // 0. Get fresh video URL (CDN URLs expire after ~24-48 hours)
+      let videoUrl = video.videoUrl;
+      const shortcode = (video as any).shortcode || video.videoUrl?.match(/\/p\/([A-Za-z0-9_-]+)/)?.[1];
+      if (shortcode && !shortcode.startsWith('id_')) {
+        try {
+          videoUrl = await fetchFreshVideoUrl(shortcode);
+        } catch (e) {
+          console.warn('Could not refresh video URL, using cached:', e);
+        }
+      }
+
       // 1. Transcription
-      const transResult = await transcribeVideo(video.videoUrl);
+      const transResult = await transcribeVideo(videoUrl);
       
       setSavedVideos(prev => 
         prev.map(v => v.id === video.id ? { ...v, status: 'analyzing', transcript: transResult.transcript } : v)
@@ -260,6 +274,16 @@ export default function App() {
         description: channel.description,
         platform: channel.platform
       });
+
+      // Start background sync for this channel's videos
+      const existing = await getChannelSyncStatus(channel.username);
+      if (!existing || existing.status !== 'completed') {
+        syncChannelVideos(channel.username, 200, (progress) => {
+          setSyncProgress(prev => ({ ...prev, [channel.username]: progress }));
+        }).catch(err => {
+          console.error('Channel sync failed:', err);
+        });
+      }
     }
   };
 
@@ -335,6 +359,7 @@ export default function App() {
             setIsLoadingVideos={setIsLoadingFeed}
             channelCursors={channelCursors}
             setChannelCursors={setChannelCursors}
+            syncProgress={syncProgress}
           />
         );
       case 'videos':
@@ -354,6 +379,7 @@ export default function App() {
             setApiVideos={setDiscoveryVideos}
             isLoadingVideos={isLoadingDiscovery}
             setIsLoadingVideos={setIsLoadingDiscovery}
+            syncProgress={syncProgress}
           />
         );
       case 'library':

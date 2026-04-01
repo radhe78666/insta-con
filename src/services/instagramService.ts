@@ -62,6 +62,7 @@ export const fetchInstagramPostsPage = async (channelUrl: string, cursor: string
       return {
         id: n.id || Math.random().toString(),
         channelId: cleanUsername,
+        shortcode: n.code || '',
         thumbnailUrl: `/api/image-proxy?url=${encodeURIComponent(rawThumb)}`,
         caption: n.caption?.text || n.edge_media_to_caption?.edges?.[0]?.node?.text || '',
         views: views,
@@ -69,7 +70,10 @@ export const fetchInstagramPostsPage = async (channelUrl: string, cursor: string
         outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
         postedAt: new Date((n.taken_at || n.taken_at_timestamp) * 1000).toISOString(),
         platform: 'Instagram',
-        videoUrl: n.video_versions?.[0]?.url || n.video_url || `https://www.instagram.com/p/${n.code}/`
+        videoUrl: n.video_versions?.[0]?.url || n.video_url || `https://www.instagram.com/p/${n.code}/`,
+        likeCount: likes,
+        commentCount: n.comment_count || 0,
+        mediaType: n.media_type || 2,
       };
     });
 
@@ -162,6 +166,25 @@ export const searchInstagramProfile = async (query: string): Promise<InstagramCh
     return [];
   }
 };
+// Fetch a fresh video URL using shortcode (1 credit)
+// Used before analysis to ensure CDN URL hasn't expired
+export const fetchFreshVideoUrl = async (shortcode: string): Promise<string> => {
+  try {
+    const data = await fetchRapidApi('mediaByShortcode', { shortcode });
+    const item = Array.isArray(data) ? data[0] : data;
+    const videoUrl = item?.urls?.[0]?.url || '';
+    
+    if (!videoUrl) {
+      throw new Error('Could not get fresh video URL');
+    }
+    
+    return videoUrl;
+  } catch (error: any) {
+    console.error('Error fetching fresh video URL:', error);
+    throw error;
+  }
+};
+
 export const fetchDiscoveryVideos = async (): Promise<InstagramVideo[]> => {
   // Demo videos for Discovery section
   return [
