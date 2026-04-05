@@ -68,7 +68,7 @@ export default function App() {
         .eq('user_id', user.id);
         
       if (channelsData) {
-        setTrackedChannels(channelsData.map(c => ({
+        const mappedChannels = channelsData.map(c => ({
           id: c.id,
           username: c.username,
           fullName: c.full_name,
@@ -77,7 +77,23 @@ export default function App() {
           description: c.description || '',
           niche: 'Instagram User',
           platform: c.platform || 'Instagram'
-        })));
+        }));
+        setTrackedChannels(mappedChannels);
+
+        // Resume incomplete syncs and preload statuses
+        mappedChannels.forEach(async (channel) => {
+          const existing = await getChannelSyncStatus(channel.username);
+          if (existing) {
+            setSyncProgress(prev => ({ ...prev, [channel.username]: existing }));
+            if (existing.status !== 'completed' && existing.status !== 'failed') {
+              syncChannelVideos(channel.username, 200, (progress) => {
+                setSyncProgress(prev => ({ ...prev, [channel.username]: progress }));
+              }).catch(err => {
+                console.error('Channel sync resume failed:', err);
+              });
+            }
+          }
+        });
       }
 
       const { data: videosData } = await supabase
