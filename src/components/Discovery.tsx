@@ -803,6 +803,14 @@ const Discovery: React.FC<DiscoveryProps> = ({
                   Add Channels
                 </button>
               </div>
+            ) : filteredVideos.length === 0 && trackedChannels.length > 0 && initialView === 'Feed' ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                  <Instagram className="w-8 h-8 text-zinc-500" />
+                </div>
+                <p className="text-zinc-300 font-black text-xl mb-2">No videos found yet</p>
+                <p className="text-zinc-500 text-sm">Background sync is running or no videos match your filters.</p>
+              </div>
             ) : filteredVideos.length === 0 && initialView === 'Library' ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <p className="text-zinc-400 font-bold">Your library is empty</p>
