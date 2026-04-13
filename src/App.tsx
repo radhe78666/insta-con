@@ -106,7 +106,7 @@ export default function App() {
       if (videosData) {
         setSavedVideos(videosData.map(v => {
           const rawThumb = v.thumbnail_url || '';
-          const proxyThumb = rawThumb.includes('/api/image-proxy') 
+          const proxyThumb = (rawThumb.includes('/api/image-proxy') || rawThumb.includes('supabase.co/storage'))
             ? rawThumb 
             : (rawThumb ? `/api/image-proxy?url=${encodeURIComponent(rawThumb)}` : '');
 

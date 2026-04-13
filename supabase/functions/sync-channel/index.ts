@@ -67,6 +67,27 @@ async function fetchLatestVideos(username: string) {
         let views = n.view_count || n.play_count || n.video_play_count;
         if (!views || views === 0) views = likes > 0 ? Math.floor(likes * (Math.random() * 15 + 10)) : Math.floor(Math.random() * 50000);
         
+        let finalThumbnailUrl = n.image_versions2?.candidates?.[0]?.url || n.display_url || "";
+        
+        if (finalThumbnailUrl) {
+            try {
+                const imgRes = await fetch(finalThumbnailUrl);
+                if (imgRes.ok) {
+                    const imgBuffer = await imgRes.arrayBuffer();
+                    const fileName = `${shortcode}.jpg`;
+                    const { error: uploadErr } = await supabase.storage
+                        .from('thumbnails')
+                        .upload(fileName, imgBuffer, { contentType: 'image/jpeg', upsert: true });
+                        
+                    if (!uploadErr) {
+                        finalThumbnailUrl = `${SUPABASE_URL}/storage/v1/object/public/thumbnails/${fileName}`;
+                    }
+                }
+            } catch (e) {
+                console.error("Storage upload failed for", shortcode, e);
+            }
+        }
+        
         newRows.push({
             username,
             shortcode,
@@ -75,7 +96,7 @@ async function fetchLatestVideos(username: string) {
             like_count: likes,
             comment_count: n.comment_count || n.edge_media_to_comment?.count || 0,
             view_count: views,
-            thumbnail_url: n.image_versions2?.candidates?.[0]?.url || n.display_url || "",
+            thumbnail_url: finalThumbnailUrl,
             video_url: n.video_url || n.video_versions?.[0]?.url || "",
             media_type: 2,
             posted_at: new Date((n.taken_at || n.taken_at_timestamp) * 1000).toISOString()
