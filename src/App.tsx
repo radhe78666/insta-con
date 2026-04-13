@@ -3,7 +3,7 @@ import { InstagramVideo, InstagramChannel, User } from './types';
 import { transcribeVideo } from './services/transcriptionService';
 import { analyzeContent } from './services/aiService';
 import { fetchFreshVideoUrl } from './services/instagramService';
-import { syncChannelVideos, SyncProgress, getChannelSyncStatus } from './services/channelSyncService';
+import { SyncProgress, getChannelSyncStatus } from './services/channelSyncService';
 import { MOCK_VIDEOS, MOCK_CHANNELS } from './mockData';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
@@ -85,12 +85,14 @@ export default function App() {
           const existing = await getChannelSyncStatus(channel.username);
           if (existing) {
             setSyncProgress(prev => ({ ...prev, [channel.username]: existing }));
-            if (existing.status !== 'completed' && existing.status !== 'failed') {
-              syncChannelVideos(channel.username, 200, (progress) => {
-                setSyncProgress(prev => ({ ...prev, [channel.username]: progress }));
-              }).catch(err => {
-                console.error('Channel sync resume failed:', err);
-              });
+            
+            // Check if incomplete or > 3 days old to trigger edge function
+            const isOld = existing.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
+            if (existing.status !== 'completed' && existing.status !== 'failed' || isOld) {
+              setSyncProgress(prev => ({ ...prev, [channel.username]: { ...existing, status: 'syncing' } }));
+              supabase.functions.invoke('sync-channel', {
+                body: { username: channel.username }
+              }).catch(err => console.error('Resume sync failed:', err));
             }
           }
         });
@@ -130,6 +132,23 @@ export default function App() {
     
     fetchData();
   }, [user?.id]);
+
+  // Poll Supabase for live sync progress
+  React.useEffect(() => {
+    const syncingChannels = (Object.values(syncProgress) as SyncProgress[]).filter(p => p.status === 'syncing');
+    if (syncingChannels.length === 0) return;
+
+    const interval = setInterval(() => {
+      syncingChannels.forEach(async (channel) => {
+        const current = await getChannelSyncStatus(channel.username);
+        if (current) {
+          setSyncProgress(prev => ({ ...prev, [channel.username]: current }));
+        }
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [syncProgress]);
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -298,11 +317,14 @@ export default function App() {
         platform: channel.platform
       });
 
-      // Start background sync for this channel's videos
+      // Start background sync for this channel's videos using Edge Function
       const existing = await getChannelSyncStatus(channel.username);
-      if (!existing || existing.status !== 'completed') {
-        syncChannelVideos(channel.username, 200, (progress) => {
-          setSyncProgress(prev => ({ ...prev, [channel.username]: progress }));
+      const isOld = existing?.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
+      
+      if (!existing || existing.status !== 'completed' || isOld) {
+        setSyncProgress(prev => ({ ...prev, [channel.username]: { username: channel.username, fetched: existing?.fetched || 0, target: 200, status: 'syncing' } }));
+        supabase.functions.invoke('sync-channel', {
+          body: { username: channel.username }
         }).catch(err => {
           console.error('Channel sync failed:', err);
         });

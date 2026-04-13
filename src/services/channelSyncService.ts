@@ -6,6 +6,7 @@ export interface SyncProgress {
   fetched: number;
   target: number;
   status: 'pending' | 'syncing' | 'completed' | 'failed';
+  last_synced_at?: string;
 }
 
 const MAX_RETRIES = 3;
