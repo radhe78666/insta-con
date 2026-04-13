@@ -18,47 +18,54 @@ async function fetchLatestVideos(username: string) {
   let cursor = "";
   let newlyAdded = 0;
   
-  while (hasNextPage) {
-    const res = await fetch(`https://instagram120.p.rapidapi.com/posts?username=${username}` + (cursor ? `&maxId=${cursor}` : ""), {
-      method: "GET",
+  while (hasNextPage && newlyAdded < 100) {
+    const res = await fetch(`https://instagram-scraper-stable-api.p.rapidapi.com/get_ig_user_posts.php`, {
+      method: 'POST',
       headers: {
-        "x-rapidapi-key": RAPIDAPI_KEY,
-        "x-rapidapi-host": "instagram120.p.rapidapi.com"
-      }
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'x-rapidapi-host': 'instagram-scraper-stable-api.p.rapidapi.com',
+        'x-rapidapi-key': RAPIDAPI_KEY
+      },
+      body: new URLSearchParams({
+        username_or_url: `https://www.instagram.com/${username}/`,
+        amount: '50',
+        pagination_token: cursor || ''
+      })
     });
     
     if (!res.ok) {
-        console.error("RapidAPI error:", await res.text());
-        break;
+        const errText = await res.text();
+        console.error("RapidAPI error:", errText);
+        throw new Error("RapidAPI Error: " + errText);
     }
     
     const data = await res.json();
-    if (!data?.result?.edges || data.result.edges.length === 0) break;
+    const posts = data?.posts || data?.items || data?.data || [];
+    if (!posts || posts.length === 0) break;
     
-    const nodes = data.result.edges.map((e: any) => e.node);
+    const nodes = posts.map((e: any) => e.node || e);
     const videoNodes = nodes.filter((n: any) => n.media_type === 2 || n.video_versions || n.video_url);
 
     if (videoNodes.length === 0) {
-      if (!data.result.page_info?.has_next_page) break;
-      cursor = data.result.page_info.end_cursor;
+      if (!data.pagination_token) break;
+      cursor = data.pagination_token;
       continue;
     }
     
     // Check which shortcodes already exist in DB
-    const shortcodes = videoNodes.map(n => n.shortcode || extractShortcode(`https://instagram.com/p/${n.shortcode}/`, n.id));
+    const shortcodes = videoNodes.map((n: any) => n.code || extractShortcode(`https://instagram.com/p/${n.code}/`, n.id));
     const { data: existingRows } = await supabase
       .from("channel_videos")
       .select("shortcode")
       .in("shortcode", shortcodes);
       
-    const existingSet = new Set((existingRows || []).map(r => r.shortcode));
+    const existingSet = new Set((existingRows || []).map((r: any) => r.shortcode));
     let hitExistingBoundary = false;
     
     const newRows = [];
     for (const n of videoNodes) {
-        const shortcode = n.shortcode || extractShortcode(`https://instagram.com/p/${n.shortcode}/`, n.id);
+        const shortcode = n.code || extractShortcode(`https://instagram.com/p/${n.code}/`, n.id);
         if (existingSet.has(shortcode)) {
-            // We found a video that's already in the DB! Delta boundary reached.
             hitExistingBoundary = true;
             break; 
         }
@@ -104,16 +111,29 @@ async function fetchLatestVideos(username: string) {
     }
 
     if (newRows.length > 0) {
-        const { error } = await supabase.from("channel_videos").upsert(newRows, { onConflict: "shortcode", ignoreDuplicates: true });
+        let rowsToInsert = newRows;
+        if (newlyAdded + newRows.length > 100) {
+            rowsToInsert = newRows.slice(0, 100 - newlyAdded);
+        }
+        const { error } = await supabase.from("channel_videos").upsert(rowsToInsert, { onConflict: "shortcode", ignoreDuplicates: true });
         if (error) console.error("Supabase upsert error:", error);
-        else newlyAdded += newRows.length;
+        else newlyAdded += rowsToInsert.length;
+        
+        // INTERMEDIATE UI PROGRESS UPDATE
+        await supabase.from('channel_sync_status').upsert({
+            username,
+            status: 'syncing',
+            total_fetched: newlyAdded,
+            target_count: 100, // Explicit target 100 as requested
+            last_synced_at: new Date().toISOString()
+        });
     }
 
     // Stop completely if we hit existing data, OR if there's no next page
-    if (hitExistingBoundary || !data.result.page_info?.has_next_page) {
+    if (hitExistingBoundary || !data.pagination_token) {
         break;
     }
-    cursor = data.result.page_info.end_cursor;
+    cursor = data.pagination_token;
   }
   
   // Mark as completed
@@ -134,8 +154,10 @@ serve(async (req) => {
     return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" } });
   }
 
+  let username = "";
   try {
-    const { username } = await req.json();
+    const body = await req.json();
+    username = body.username;
     if (!username) return new Response(JSON.stringify({ error: "Missing username" }), { status: 400 });
 
     // Inform DB we're syncing
@@ -149,6 +171,13 @@ serve(async (req) => {
     const qty = await fetchLatestVideos(username);
     return new Response(JSON.stringify({ success: true, updated: qty }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
+    if (username) {
+        await supabase.from('channel_sync_status').upsert({
+          username,
+          status: 'failed',
+          last_synced_at: new Date().toISOString()
+        });
+    }
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 });
