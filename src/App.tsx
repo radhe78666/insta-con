@@ -105,15 +105,10 @@ export default function App() {
         
       if (videosData) {
         setSavedVideos(videosData.map(v => {
-          const rawThumb = v.thumbnail_url || '';
-          const proxyThumb = (rawThumb.includes('/api/image-proxy') || rawThumb.includes('supabase.co/storage'))
-            ? rawThumb 
-            : (rawThumb ? `/api/image-proxy?url=${encodeURIComponent(rawThumb)}` : '');
-
           return {
             id: v.id,
             channelId: v.channel_id,
-            thumbnailUrl: proxyThumb,
+            thumbnailUrl: v.thumbnail_url || '',
           caption: v.caption || '',
           views: v.views || 0,
           engagement: isNaN(Number(v.engagement)) ? 0 : Number(v.engagement),

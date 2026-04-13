@@ -130,11 +130,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
           id: v.id,
           channelId: v.username,
           shortcode: v.shortcode,
-          thumbnailUrl: v.thumbnail_url 
-            ? (v.thumbnail_url.includes('/api/image-proxy') || v.thumbnail_url.includes('supabase.co/storage')
-                ? v.thumbnail_url 
-                : `/api/image-proxy?url=${encodeURIComponent(v.thumbnail_url)}`)
-            : '',
+          thumbnailUrl: v.thumbnail_url || '',
           caption: v.caption || '',
           views: v.view_count || 0,
           engagement: v.view_count > 0 ? ((v.like_count || 0) / v.view_count) : 0,
