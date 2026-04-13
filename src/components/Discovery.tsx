@@ -748,40 +748,43 @@ const Discovery: React.FC<DiscoveryProps> = ({
               </h2>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
-            {isLoadingVideos ? (
+            {/* Sync Progress Banner (shown when syncing, alongside videos) */}
+            {syncProgress && trackedChannels.some(ch => syncProgress[ch.username]?.status === 'syncing') && (
+              <div className="col-span-full pb-4 border-b border-white/5 mb-4">
+                <div className="flex flex-col gap-4 w-full">
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-zinc-300 font-bold text-sm">Background Sync in progress...</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {trackedChannels.filter(ch => syncProgress[ch.username]?.status === 'syncing').map(ch => {
+                    const progress = syncProgress[ch.username];
+                    const pct = Math.round((progress.fetched / progress.target) * 100);
+                    return (
+                      <div key={ch.username} className="w-full bg-white/5 p-3 rounded-xl border border-white/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-zinc-400 font-medium">@{ch.username}</span>
+                          <span className="text-xs text-brand-accent font-bold">{progress.fetched}/{progress.target}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-brand-accent to-orange-400 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Existing Videos List or Empty States */}
+            {isLoadingVideos && filteredVideos.length === 0 ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                {syncProgress && trackedChannels.some(ch => syncProgress[ch.username]?.status === 'syncing') ? (
-                  <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-                    <p className="text-zinc-300 font-bold text-lg">Syncing Channel Videos...</p>
-                    {trackedChannels.filter(ch => syncProgress[ch.username]?.status === 'syncing').map(ch => {
-                      const progress = syncProgress[ch.username];
-                      const pct = Math.round((progress.fetched / progress.target) * 100);
-                      return (
-                        <div key={ch.username} className="w-full">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-zinc-400">@{ch.username}</span>
-                            <span className="text-sm text-brand-accent font-bold">{progress.fetched}/{progress.target}</span>
-                          </div>
-                          <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-brand-accent to-orange-400 rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <p className="text-zinc-600 text-xs mt-2">Sort &amp; filter will be available after sync completes</p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-zinc-400 font-bold">Loading cached videos...</p>
-                    <p className="text-zinc-600 text-xs mt-2">
-                      {initialView === 'Videos' ? 'Discovering top recommended content for you...' : 'Loading from database...'}
-                    </p>
-                  </>
-                )}
+                <p className="text-zinc-400 font-bold">Loading cached videos...</p>
               </div>
             ) : initialView === 'Videos' && filteredVideos.length === 0 ? (
               <div className="col-span-full py-20 flex flex-col items-center justify-center">

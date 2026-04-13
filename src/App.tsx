@@ -317,7 +317,7 @@ export default function App() {
       const isOld = existing?.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
       
       if (!existing || existing.status !== 'completed' || isOld) {
-        setSyncProgress(prev => ({ ...prev, [channel.username]: { username: channel.username, fetched: existing?.fetched || 0, target: 200, status: 'syncing' } }));
+        setSyncProgress(prev => ({ ...prev, [channel.username]: { username: channel.username, fetched: existing?.fetched || 0, target: 100, status: 'syncing' } }));
         supabase.functions.invoke('sync-channel', {
           body: { username: channel.username }
         }).catch(err => {
