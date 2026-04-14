@@ -117,9 +117,10 @@ export async function getChannelSyncStatus(username: string): Promise<SyncProgre
   
   return {
     username: data.username,
-    fetched: data.total_fetched,
-    target: data.target_count,
+    fetched: data.total_fetched || 0,
+    target: Math.min(data.target_count || 100, 100),
     status: data.status,
+    last_synced_at: data.last_synced_at,
   };
 }
 

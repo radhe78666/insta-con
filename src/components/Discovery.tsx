@@ -155,40 +155,42 @@ const Discovery: React.FC<DiscoveryProps> = ({
     loadCachedVideos();
   }, [trackedChannels, initialView]);
 
-  // Reload videos when sync completes
+  // Reload videos when sync completes or fails
   React.useEffect(() => {
     if (initialView === 'Library' || initialView === 'Videos') return;
     if (!syncProgress || Object.keys(syncProgress).length === 0) return;
 
-    const allCompleted = trackedChannels.every(ch => {
+    const allDone = trackedChannels.every(ch => {
       const progress = syncProgress[ch.username];
-      return !progress || progress.status === 'completed';
+      return !progress || progress.status === 'completed' || progress.status === 'failed';
     });
 
-    if (allCompleted && trackedChannels.length > 0) {
-      // Refresh from cache when all syncs complete
+    if (allDone && trackedChannels.length > 0) {
+      // Refresh from cache when all syncs complete/fail
       const loadFresh = async () => {
         try {
           const usernames = trackedChannels.map(ch => ch.username);
           const cachedData = await getCachedVideosForChannels(usernames);
           
-          const formattedVideos: InstagramVideo[] = cachedData.map((v: any) => ({
-            id: v.id,
-            channelId: v.username,
-            shortcode: v.shortcode,
-            thumbnailUrl: v.thumbnail_url || '',
-            caption: v.caption || '',
-            views: v.view_count || 0,
-            engagement: v.view_count > 0 ? ((v.like_count || 0) / v.view_count) : 0,
-            outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
-            postedAt: v.posted_at || new Date().toISOString(),
-            platform: 'Instagram' as const,
-            videoUrl: v.video_url || '',
-            likeCount: v.like_count || 0,
-            commentCount: v.comment_count || 0,
-          }));
-
-          setApiVideos(formattedVideos.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
+          // Only update if we got real data back (don't wipe existing videos on failed sync)
+          if (cachedData.length > 0) {
+            const formattedVideos: InstagramVideo[] = cachedData.map((v: any) => ({
+              id: v.id,
+              channelId: v.username,
+              shortcode: v.shortcode,
+              thumbnailUrl: v.thumbnail_url || '',
+              caption: v.caption || '',
+              views: v.view_count || 0,
+              engagement: v.view_count > 0 ? ((v.like_count || 0) / v.view_count) : 0,
+              outlierScore: Math.round((Math.random() * 5 + 1) * 10) / 10,
+              postedAt: v.posted_at || new Date().toISOString(),
+              platform: 'Instagram' as const,
+              videoUrl: v.video_url || '',
+              likeCount: v.like_count || 0,
+              commentCount: v.comment_count || 0,
+            }));
+            setApiVideos(formattedVideos.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()));
+          }
         } catch (err) {
           console.error('Error refreshing cached videos:', err);
         } finally {
@@ -748,8 +750,8 @@ const Discovery: React.FC<DiscoveryProps> = ({
               </h2>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
-            {/* Sync Progress Banner (shown when syncing, alongside videos) */}
-            {syncProgress && trackedChannels.some(ch => syncProgress[ch.username]?.status === 'syncing') && (
+            {/* Sync Progress Banner (shown when syncing or failed, alongside videos) */}
+            {syncProgress && trackedChannels.some(ch => syncProgress[ch.username]?.status === 'syncing' || syncProgress[ch.username]?.status === 'failed') && (
               <div className="col-span-full pb-4 border-b border-white/5 mb-4">
                 <div className="flex flex-col gap-4 w-full">
                   <div className="flex items-center gap-3">
@@ -757,14 +759,16 @@ const Discovery: React.FC<DiscoveryProps> = ({
                     <p className="text-zinc-300 font-bold text-sm">Background Sync in progress...</p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {trackedChannels.filter(ch => syncProgress[ch.username]?.status === 'syncing').map(ch => {
+                  {trackedChannels.filter(ch => syncProgress[ch.username]?.status === 'syncing' || syncProgress[ch.username]?.status === 'failed').map(ch => {
                     const progress = syncProgress[ch.username];
-                    const pct = Math.round((progress.fetched / progress.target) * 100);
+                    const cappedTarget = Math.min(progress.target || 100, 100);
+                    const pct = Math.round((progress.fetched / cappedTarget) * 100);
                     return (
                       <div key={ch.username} className="w-full bg-white/5 p-3 rounded-xl border border-white/10">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-zinc-400 font-medium">@{ch.username}</span>
-                          <span className="text-xs text-brand-accent font-bold">{progress.fetched}/{progress.target}</span>
+                          <span className="text-xs text-brand-accent font-bold">{progress.fetched}/{cappedTarget}</span>
+                          {progress.status === 'failed' && <span className="text-xs text-red-400 ml-1">(retrying...)</span>}
                         </div>
                         <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                           <div 
