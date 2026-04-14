@@ -88,9 +88,17 @@ export default function App() {
           if (existing) {
             setSyncProgress(prev => ({ ...prev, [channel.username]: existing }));
             
-            // Check if incomplete or > 3 days old to trigger edge function
             const isOld = existing.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
-            if ((existing.status !== 'completed' && existing.status !== 'failed' || isOld) && !syncingChannels.current.has(channel.username)) {
+            
+            // If already syncing in DB: edge function is still running on server.
+            // Just update UI and let polling take over. DO NOT restart!
+            if (existing.status === 'syncing') {
+              setSyncProgress(prev => ({ ...prev, [channel.username]: { ...existing, status: 'syncing' } }));
+              return; // polling will track progress automatically
+            }
+            
+            // Only restart if failed or sync is > 3 days old
+            if ((existing.status === 'failed' || isOld) && !syncingChannels.current.has(channel.username)) {
               syncingChannels.current.add(channel.username);
               setSyncProgress(prev => ({ ...prev, [channel.username]: { ...existing, status: 'syncing' } }));
               supabase.functions.invoke('sync-channel', {
