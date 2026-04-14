@@ -82,23 +82,20 @@ export default function App() {
         }));
         setTrackedChannels(mappedChannels);
 
-        // Resume incomplete syncs and preload statuses
+        // Resume only failed syncs on page load. Completed = done forever, no auto-refresh.
         mappedChannels.forEach(async (channel) => {
           const existing = await getChannelSyncStatus(channel.username);
           if (existing) {
             setSyncProgress(prev => ({ ...prev, [channel.username]: existing }));
             
-            const isOld = existing.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
-            
-            // If already syncing in DB: edge function is still running on server.
-            // Just update UI and let polling take over. DO NOT restart!
+            // If still syncing in DB: edge function is running. Just poll, don't restart.
             if (existing.status === 'syncing') {
               setSyncProgress(prev => ({ ...prev, [channel.username]: { ...existing, status: 'syncing' } }));
-              return; // polling will track progress automatically
+              return;
             }
             
-            // Only restart if failed or sync is > 3 days old
-            if ((existing.status === 'failed' || isOld) && !syncingChannels.current.has(channel.username)) {
+            // Only retry if previously failed (never retry completed)
+            if (existing.status === 'failed' && !syncingChannels.current.has(channel.username)) {
               syncingChannels.current.add(channel.username);
               setSyncProgress(prev => ({ ...prev, [channel.username]: { ...existing, status: 'syncing' } }));
               supabase.functions.invoke('sync-channel', {
@@ -324,11 +321,11 @@ export default function App() {
         platform: channel.platform
       });
 
-      // Start background sync for this channel's videos using Edge Function
+      // Start background sync ONLY if never synced before or previously failed
+      // Completed channels are NEVER re-synced (saves API credits)
       const existing = await getChannelSyncStatus(channel.username);
-      const isOld = existing?.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
       
-      if ((!existing || existing.status !== 'completed' || isOld) && !syncingChannels.current.has(channel.username)) {
+      if ((!existing || existing.status === 'failed') && !syncingChannels.current.has(channel.username)) {
         syncingChannels.current.add(channel.username);
         setSyncProgress(prev => ({ ...prev, [channel.username]: { username: channel.username, fetched: existing?.fetched || 0, target: 100, status: 'syncing' } }));
         supabase.functions.invoke('sync-channel', {
