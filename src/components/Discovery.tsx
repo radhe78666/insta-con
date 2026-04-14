@@ -153,7 +153,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
     };
 
     loadCachedVideos();
-  }, [trackedChannels, initialView, apiVideos.length]);
+  }, [trackedChannels, initialView]);
 
   // Reload videos when sync completes
   React.useEffect(() => {
@@ -176,7 +176,7 @@ const Discovery: React.FC<DiscoveryProps> = ({
             id: v.id,
             channelId: v.username,
             shortcode: v.shortcode,
-            thumbnailUrl: v.thumbnail_url ? `/api/image-proxy?url=${encodeURIComponent(v.thumbnail_url)}` : '',
+            thumbnailUrl: v.thumbnail_url || '',
             caption: v.caption || '',
             views: v.view_count || 0,
             engagement: v.view_count > 0 ? ((v.like_count || 0) / v.view_count) : 0,

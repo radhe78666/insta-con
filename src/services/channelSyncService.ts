@@ -89,7 +89,7 @@ async function updateSyncStatus(
   fetched: number, 
   status: string, 
   cursor: string = '',
-  target: number = 200
+  target: number = 100
 ) {
   await supabase
     .from('channel_sync_status')
@@ -132,7 +132,7 @@ export async function getChannelSyncStatus(username: string): Promise<SyncProgre
  */
 export async function syncChannelVideos(
   username: string,
-  targetCount: number = 200,
+  targetCount: number = 100,
   onProgress?: (progress: SyncProgress) => void
 ): Promise<SyncProgress> {
   // Check if already synced and completed
