@@ -48,6 +48,8 @@ export default function App() {
   const [channelCursors, setChannelCursors] = useState<Record<string, string>>({});
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['dashboard']));
   const [syncProgress, setSyncProgress] = useState<Record<string, SyncProgress>>({});
+  // Guard: track channels currently being synced to prevent double-invocation race condition
+  const syncingChannels = React.useRef<Set<string>>(new Set());;
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -88,11 +90,13 @@ export default function App() {
             
             // Check if incomplete or > 3 days old to trigger edge function
             const isOld = existing.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
-            if (existing.status !== 'completed' && existing.status !== 'failed' || isOld) {
+            if ((existing.status !== 'completed' && existing.status !== 'failed' || isOld) && !syncingChannels.current.has(channel.username)) {
+              syncingChannels.current.add(channel.username);
               setSyncProgress(prev => ({ ...prev, [channel.username]: { ...existing, status: 'syncing' } }));
               supabase.functions.invoke('sync-channel', {
                 body: { username: channel.username }
-              }).catch(err => console.error('Resume sync failed:', err));
+              }).finally(() => syncingChannels.current.delete(channel.username))
+                .catch(err => console.error('Resume sync failed:', err));
             }
           }
         });
@@ -316,13 +320,15 @@ export default function App() {
       const existing = await getChannelSyncStatus(channel.username);
       const isOld = existing?.last_synced_at && new Date(existing.last_synced_at).getTime() < Date.now() - 3 * 24 * 60 * 60 * 1000;
       
-      if (!existing || existing.status !== 'completed' || isOld) {
+      if ((!existing || existing.status !== 'completed' || isOld) && !syncingChannels.current.has(channel.username)) {
+        syncingChannels.current.add(channel.username);
         setSyncProgress(prev => ({ ...prev, [channel.username]: { username: channel.username, fetched: existing?.fetched || 0, target: 100, status: 'syncing' } }));
         supabase.functions.invoke('sync-channel', {
           body: { username: channel.username }
-        }).catch(err => {
-          console.error('Channel sync failed:', err);
-        });
+        }).finally(() => syncingChannels.current.delete(channel.username))
+          .catch(err => {
+            console.error('Channel sync failed:', err);
+          });
       }
     }
   };
